@@ -2019,6 +2019,7 @@ function createNewGoal() {
   goalsEditDate = todayISO();
   renderGoalsTabCounts();
   renderGoalsGrid();
+  if (typeof renderTasksTable === "function") renderTasksTable();
 }
 
 // Counts overdue tasks (status not Done/Cancelled, has a date, date is in
@@ -2306,6 +2307,7 @@ function renderGoalsGrid() {
       saveGoalsData();
       renderGoalsTabCounts();
       renderGoalsGrid();
+      if (typeof renderTasksTable === "function") renderTasksTable();
     });
   });
   goalsGridEl.querySelectorAll(".goals-edit-save").forEach(btn => {
@@ -2339,6 +2341,7 @@ function renderGoalsGrid() {
       saveGoalsData();
       renderGoalsTabCounts();
       renderGoalsGrid();
+      if (typeof renderTasksTable === "function") renderTasksTable();
     });
   });
 }
