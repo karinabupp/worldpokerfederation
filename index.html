@@ -746,6 +746,72 @@
     padding: 12px;
   }
   #map { width: 100%; height: auto; display: block; background: var(--water); border-radius: 8px; }
+  #map-search-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  #map-search-bar svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: var(--text-muted);
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+  #map-search-wrap {
+    position: relative;
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+  }
+  #map-search-input {
+    width: 100%;
+    padding: 8px 10px 8px 32px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--bg);
+  }
+  #map-search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  #map-search-go {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  #map-search-go:hover { border-color: var(--border-strong); }
+  #map-search-reset {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--accent);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: none;
+  }
+  #map-search-reset.show { display: inline-block; }
+  #map-search-reset:hover { border-color: var(--accent); }
+  #map-search-msg {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: -4px 0 8px 2px;
+    min-height: 14px;
+  }
   .legend-icon { width: 12px; height: 12px; flex-shrink: 0; display: block; }
   path.country {
     stroke: #ffffff;
@@ -1242,6 +1308,16 @@
 
 <div id="main">
   <div id="wrap">
+    <div id="map-search-bar">
+      <div id="map-search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="map-search-input" placeholder="Buscar país..." list="map-search-list" autocomplete="off">
+        <datalist id="map-search-list"></datalist>
+      </div>
+      <button type="button" id="map-search-go">Buscar</button>
+      <button type="button" id="map-search-reset">Ver mundo todo</button>
+    </div>
+    <div id="map-search-msg"></div>
     <svg id="map" viewBox="0 0 960 500"></svg>
   </div>
 
@@ -3621,8 +3697,17 @@ Promise.all([
   loadFromCloud()
 ]).then(([world]) => {
   allCountries = topojson.feature(world, world.objects.countries).features;
+  // world-atlas's admin-0 country set (like Natural Earth) folds Hong Kong into
+  // China and doesn't give it its own polygon, unlike Taiwan which is already
+  // a separate entry. Pull Hong Kong's shape out of the China state-level data
+  // and add it as its own top-level feature so it shows on the world map too.
+  if (!allCountries.some(f => f.properties.name === "Hong Kong")) {
+    const hk = CHINA_GEOJSON.features.find(f => f.properties.name === "Hong Kong");
+    if (hk) allCountries.push(hk);
+  }
   renderLegend();
   renderWorldMap();
+  populateMapSearchList();
 }).catch(err => {
   svg.append("text")
     .attr("x", width / 2)
@@ -3880,6 +3965,86 @@ function closePanel() {
 }
 
 document.getElementById("panel-close").addEventListener("click", closePanel);
+
+// --- Country search box (Members map) ---
+// Small/hard-to-click countries (Vatican, Singapore, Hong Kong, etc.) are
+// easy to miss on the world map at this zoom level, so this lets the user
+// search by name, jump straight to that country's record, and zoom the map
+// in on it so it's actually visible and clickable.
+const WORLD_VIEWBOX = "0 0 960 500";
+const mapSearchInput = document.getElementById("map-search-input");
+const mapSearchGo = document.getElementById("map-search-go");
+const mapSearchReset = document.getElementById("map-search-reset");
+const mapSearchMsg = document.getElementById("map-search-msg");
+const mapSearchList = document.getElementById("map-search-list");
+
+function normalizeSearchStr(s) {
+  return (s || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function populateMapSearchList() {
+  const names = allCountries
+    .map(f => f.properties.name)
+    .sort((a, b) => a.localeCompare(b));
+  mapSearchList.innerHTML = names.map(n => `<option value="${n}"></option>`).join("");
+}
+
+function findCountryFeature(query) {
+  const q = normalizeSearchStr(query);
+  if (!q) return null;
+  let best = null;
+  allCountries.forEach(f => {
+    const name = normalizeSearchStr(f.properties.name);
+    if (name === q) { best = f; return; }
+    if (!best && name.startsWith(q)) best = f;
+    if (!best && name.includes(q)) best = f;
+  });
+  return best;
+}
+
+function zoomToFeature(feature) {
+  const [[x0, y0], [x1, y1]] = path.bounds(feature);
+  const w = Math.max(x1 - x0, 14);
+  const h = Math.max(y1 - y0, 14);
+  const pad = 0.6;
+  const vx = x0 - w * pad;
+  const vy = y0 - h * pad;
+  const vw = w * (1 + 2 * pad);
+  const vh = h * (1 + 2 * pad);
+  svg.transition().duration(500).attr("viewBox", `${vx} ${vy} ${vw} ${vh}`);
+  mapSearchReset.classList.add("show");
+}
+
+function resetMapZoom() {
+  svg.transition().duration(400).attr("viewBox", WORLD_VIEWBOX);
+  mapSearchReset.classList.remove("show");
+}
+
+function runMapSearch() {
+  const query = mapSearchInput.value;
+  if (!query.trim()) return;
+  if (inStateView) renderWorldMap();
+  const feature = findCountryFeature(query);
+  if (!feature) {
+    mapSearchMsg.textContent = `País não encontrado: "${query}"`;
+    return;
+  }
+  mapSearchMsg.textContent = "";
+  selectCountry(feature.properties.name, feature);
+  zoomToFeature(feature);
+}
+
+mapSearchGo.addEventListener("click", runMapSearch);
+mapSearchReset.addEventListener("click", resetMapZoom);
+mapSearchInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") { e.preventDefault(); runMapSearch(); }
+});
+mapSearchInput.addEventListener("change", runMapSearch);
+mapSearchInput.addEventListener("input", () => { mapSearchMsg.textContent = ""; });
 
 // --- Per-state pipeline UI (currently: United States of America) ---
 const countryFieldsEl = document.getElementById("country-fields");
