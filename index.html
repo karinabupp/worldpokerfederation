@@ -290,7 +290,7 @@
   #tasks-table { background: #ffffff; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
   .tasks-row {
     display: grid;
-    grid-template-columns: 1fr 150px 130px 130px 200px 240px 80px;
+    grid-template-columns: 1fr 150px 130px 130px 200px 240px 158px;
     align-items: center;
     border-bottom: 1px solid var(--border);
     min-height: 56px;
@@ -447,6 +447,17 @@
     cursor: pointer;
   }
   .tasks-col-actions { display: flex; align-items: center; gap: 4px; justify-content: flex-end; }
+  .tasks-type-select {
+    border: 1px solid var(--border);
+    background: #ffffff;
+    border-radius: 6px;
+    padding: 6px 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
   .tasks-action-btn {
     background: transparent;
     border: none;
@@ -1518,7 +1529,7 @@ function applyAllData(data) {
   if (data.committeeStates) committeeStateData = data.committeeStates;
   if (data.brazilStates) brazilStateData = data.brazilStates;
   if (data.goals) goalsData = data.goals.map(migrateGoalRecord);
-  if (data.tasks) tasksData = data.tasks.map(ensureTaskDefaults);
+  if (data.tasks) tasksData = data.tasks.map(t => ensureTaskDefaults(t));
   if (data.assignees) assigneesList = data.assignees;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(countryData));
   localStorage.setItem(COMMITTEE_STORAGE_KEY, JSON.stringify(committeeCountryData));
@@ -2532,7 +2543,8 @@ const TASKS_SEED_DATA = [
   ] }
 ];
 
-function ensureTaskDefaults(t) {
+function ensureTaskDefaults(t, depth) {
+  if (depth === undefined) depth = 0;
   if (!Array.isArray(t.subtasks)) t.subtasks = [];
   if (t.status === undefined) t.status = "Not Started";
   if (t.status === "Late Progress") t.status = "Late"; // migrate old label
@@ -2545,14 +2557,19 @@ function ensureTaskDefaults(t) {
   delete t.assignee;
   t.assignees = t.assignees.map(n => ASSIGNEE_RENAMES[n] || n);
   if (t.kpiLink === undefined) t.kpiLink = "";
-  t.subtasks.forEach(ensureTaskDefaults);
+  // "rowType" is the explicit task/subtask classification the user picks per
+  // row (drives whether the row gets a status color). For data saved before
+  // this existed, default it from nesting depth so existing boards look the
+  // same as before.
+  if (t.rowType !== "task" && t.rowType !== "subtask") t.rowType = depth > 0 ? "subtask" : "task";
+  t.subtasks.forEach(sub => ensureTaskDefaults(sub, depth + 1));
   return t;
 }
 
 let tasksData = [];
 try {
   const stored = JSON.parse(localStorage.getItem(TASKS_STORAGE_KEY) || "null");
-  tasksData = (Array.isArray(stored) && stored.length) ? stored.map(ensureTaskDefaults) : TASKS_SEED_DATA.map(t => ensureTaskDefaults({ ...t }));
+  tasksData = (Array.isArray(stored) && stored.length) ? stored.map(t => ensureTaskDefaults(t)) : TASKS_SEED_DATA.map(t => ensureTaskDefaults({ ...t }));
 } catch (e) {
   tasksData = TASKS_SEED_DATA.map(t => ensureTaskDefaults({ ...t }));
 }
@@ -2678,8 +2695,9 @@ function renderTaskRow(t, depth) {
   const hasChildren = t.subtasks.length > 0;
   const expanded = tasksExpanded.has(t.id);
   const colors = TASK_STATUS_COLORS[t.status] || TASK_STATUS_COLORS["Not Started"];
-  const isSub = depth > 0;
-  const rowStyle = isSub ? ` style="background:${colors.bg}"` : "";
+  const isSub = depth > 0; // structural: nested under another row (drag/select stay tied to this)
+  const isSubtaskType = t.rowType === "subtask"; // explicit classification chosen via the row's Task/Subtask selector
+  const rowStyle = isSubtaskType ? ` style="background:${colors.bg}"` : "";
   const selected = isSub && tasksSelectedIds.has(t.id);
   let html = `
     <div class="tasks-row ${selected ? "tasks-row-selected" : ""}" data-id="${t.id}"${rowStyle}>
@@ -2707,6 +2725,10 @@ function renderTaskRow(t, depth) {
         </select>
       </div>
       <div class="tasks-col-actions">
+        <select class="tasks-type-select" data-id="${t.id}" title="Task ou subtask? Subtasks ganham a cor do status">
+          <option value="task" ${t.rowType === "task" ? "selected" : ""}>Task</option>
+          <option value="subtask" ${t.rowType === "subtask" ? "selected" : ""}>Subtask</option>
+        </select>
         <button class="tasks-action-btn" data-id="${t.id}" data-action="add" type="button" title="Adicionar subtask">+</button>
         <button class="tasks-action-btn" data-id="${t.id}" data-action="delete" type="button" title="Excluir">🗑</button>
       </div>
@@ -2842,6 +2864,7 @@ function renderTasksTable() {
         endDate: row.endDate || "",
         assignees: row.assignees || [],
         kpiLink: "",
+        rowType: current.rowType,
         subtasks: []
       }));
       array.splice(index + 1, 0, ...newTasks);
@@ -2938,12 +2961,21 @@ function renderTasksTable() {
       if (typeof renderGoalsGrid === "function") renderGoalsGrid();
     });
   });
+  body.querySelectorAll(".tasks-type-select").forEach(select => {
+    select.addEventListener("change", () => {
+      const t = findTaskById(tasksData, select.dataset.id);
+      if (!t) return;
+      t.rowType = select.value;
+      saveTasksData();
+      renderTasksTable();
+    });
+  });
   body.querySelectorAll('.tasks-action-btn[data-action="add"]').forEach(btn => {
     btn.addEventListener("click", () => {
       const parent = findTaskById(tasksData, btn.dataset.id);
       if (!parent) return;
       const newId = "task-" + Date.now();
-      parent.subtasks.push({ id: newId, name: "Nova subtask", status: "Not Started", startDate: "", endDate: "", assignees: [], kpiLink: "", subtasks: [] });
+      parent.subtasks.push({ id: newId, name: "Nova subtask", status: "Not Started", startDate: "", endDate: "", assignees: [], kpiLink: "", rowType: "subtask", subtasks: [] });
       tasksExpanded.add(parent.id);
       saveTasksData();
       renderTasksTable();
@@ -2973,7 +3005,7 @@ function renderTasksTable() {
 
 document.getElementById("tasks-add-btn").addEventListener("click", () => {
   const newId = "task-" + Date.now();
-  tasksData.push({ id: newId, name: "Nova task", status: "Not Started", startDate: "", endDate: "", assignees: [], kpiLink: "", subtasks: [] });
+  tasksData.push({ id: newId, name: "Nova task", status: "Not Started", startDate: "", endDate: "", assignees: [], kpiLink: "", rowType: "task", subtasks: [] });
   saveTasksData();
   renderTasksTable();
 });
