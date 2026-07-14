@@ -357,6 +357,7 @@
     color: var(--text);
     width: 100%;
     cursor: pointer;
+    margin-top: 4px;
   }
   .tasks-assignee-new-input {
     border: 1px solid var(--accent);
@@ -366,7 +367,57 @@
     font-size: 13.5px;
     color: var(--text);
     width: 100%;
+    margin-top: 4px;
   }
+  .tasks-assignee-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+  .tasks-assignee-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px 6px 3px 10px;
+    font-size: 12px;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .tasks-assignee-remove {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0 2px;
+    line-height: 1;
+  }
+  .tasks-assignee-remove:hover { color: #e24b4a; }
+  .tasks-assignee-add-btn {
+    background: transparent;
+    border: 1px dashed var(--border-strong);
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    font-size: 13px;
+    color: var(--text-muted);
+    cursor: pointer;
+    line-height: 1;
+  }
+  .tasks-assignee-add-btn:hover { background: var(--land-default); color: var(--text); }
+  .tasks-assignee-summary { cursor: pointer; font-weight: 600; }
+  .tasks-assignee-summary:hover { background: var(--land-default); }
+  .tasks-assignee-collapse {
+    background: transparent;
+    border: 1px dashed var(--border-strong);
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    font-size: 13px;
+    color: var(--text-muted);
+    cursor: pointer;
+    line-height: 1;
+  }
+  .tasks-assignee-collapse:hover { background: var(--land-default); color: var(--text); }
   .tasks-kpi-select {
     border: 1px solid var(--border);
     background: #ffffff;
@@ -1192,6 +1243,10 @@
           <select id="panel-status"></select>
         </div>
 
+        <div class="field" id="trading-field">
+          <label class="check-item"><input type="checkbox" id="panel-trading"> Trading</label>
+        </div>
+
         <div class="field">
           <label for="panel-partner">Nome do parceiro</label>
           <input id="panel-partner" type="text" placeholder="Nome da pessoa ou entidade">
@@ -1738,9 +1793,10 @@ function saveData() {
 }
 
 function getRecord(name) {
-  const rec = countryData[name] || { status: "Not Started", partner: "", website: "", social: "", tournaments: "", checklist: {} };
+  const rec = countryData[name] || { status: "Not Started", partner: "", website: "", social: "", tournaments: "", checklist: {}, trading: false };
   if (!rec.checklist) rec.checklist = {};
   if (rec.partner === undefined) rec.partner = "";
+  if (rec.trading === undefined) rec.trading = false;
   return rec;
 }
 
@@ -2200,7 +2256,7 @@ function openOverdueModal(goalId) {
             <span class="overdue-task-sep">·</span>
             <select class="overdue-task-status" data-id="${t.id}" data-goal-id="${goalId}">${taskStatusOptionsMarkup(t.status)}</select>
           </div>
-          ${t.assignee ? `<div class="overdue-task-meta">${t.assignee}</div>` : ""}
+          ${t.assignees.length ? `<div class="overdue-task-meta">${t.assignees.join(", ")}</div>` : ""}
         </div>
       `).join("")
     : `<div class="overdue-task-empty">Nenhuma task em atraso.</div>`;
@@ -2401,20 +2457,60 @@ function addAssigneeName(name) {
 }
 
 let tasksAddingAssigneeId = null; // id of a task currently showing the inline "add new name" input
+let tasksAssigneePickerId = null; // id of a task currently showing the "pick an existing name" dropdown
+let tasksAssigneeExpandedId = null; // id of a task showing all its assignee chips instead of the "Name +N" summary
+
+function assigneeCellMarkup(t) {
+  const fullChips = t.assignees.map(name => `
+    <span class="tasks-assignee-chip">${name}<button class="tasks-assignee-remove" data-id="${t.id}" data-name="${name.replace(/"/g, "&quot;")}" type="button" title="Remover">×</button></span>
+  `).join("");
+
+  if (tasksAddingAssigneeId === t.id) {
+    return `<div class="tasks-assignee-chips">${fullChips}</div><input type="text" class="tasks-assignee-new-input" data-id="${t.id}" placeholder="Nome novo…" autofocus>`;
+  }
+  if (tasksAssigneePickerId === t.id) {
+    const available = assigneesList.filter(n => !t.assignees.includes(n));
+    return `<div class="tasks-assignee-chips">${fullChips}</div><select class="tasks-assignee-select" data-id="${t.id}">
+      <option value="">Escolher…</option>
+      ${available.map(name => `<option value="${name}">${name}</option>`).join("")}
+      <option value="__add_new__">+ Adicionar nome…</option>
+    </select>`;
+  }
+
+  // 0 or 1 assignee — nothing to collapse, just show it/them directly.
+  if (t.assignees.length <= 1) {
+    return `<div class="tasks-assignee-chips">${fullChips}<button class="tasks-assignee-add-btn" data-id="${t.id}" type="button" title="Adicionar responsável">+</button></div>`;
+  }
+
+  // 2+ assignees: collapsed by default (keeps the row from getting tall),
+  // showing "Name +N" with every name in the hover tooltip. Click to expand
+  // and manage individually.
+  if (tasksAssigneeExpandedId === t.id) {
+    return `<div class="tasks-assignee-chips">${fullChips}
+      <button class="tasks-assignee-collapse" data-id="${t.id}" type="button" title="Recolher">‹</button>
+      <button class="tasks-assignee-add-btn" data-id="${t.id}" type="button" title="Adicionar responsável">+</button>
+    </div>`;
+  }
+  const title = t.assignees.join(", ");
+  return `<div class="tasks-assignee-chips">
+    <span class="tasks-assignee-chip tasks-assignee-summary" data-id="${t.id}" title="${title}">${t.assignees[0]} +${t.assignees.length - 1}</span>
+    <button class="tasks-assignee-add-btn" data-id="${t.id}" type="button" title="Adicionar responsável">+</button>
+  </div>`;
+}
 
 const TASKS_STORAGE_KEY = "wpf_tasks_data";
 const TASKS_SEED_DATA = [
-  { id: "task-institutional", name: "Institutional", status: "In Progress", startDate: "", endDate: "", assignee: "", kpiLink: "", subtasks: [
-    { id: "task-sub-1", name: "Enviar contrato pra nova federação", status: "Late", startDate: "2026-06-15", endDate: "2026-07-01", assignee: "Karina Bupp", kpiLink: "opening-federations", subtasks: [] },
-    { id: "task-sub-2", name: "Confirmar presença dos embaixadores", status: "In Progress", startDate: "2026-06-10", endDate: "2026-06-25", assignee: "Leonardo Cavarge", kpiLink: "member-federations", subtasks: [] }
+  { id: "task-institutional", name: "Institutional", status: "In Progress", startDate: "", endDate: "", assignees: [], kpiLink: "", subtasks: [
+    { id: "task-sub-1", name: "Enviar contrato pra nova federação", status: "Late", startDate: "2026-06-15", endDate: "2026-07-01", assignees: ["Karina Bupp"], kpiLink: "opening-federations", subtasks: [] },
+    { id: "task-sub-2", name: "Confirmar presença dos embaixadores", status: "In Progress", startDate: "2026-06-10", endDate: "2026-06-25", assignees: ["Leonardo Cavarge"], kpiLink: "member-federations", subtasks: [] }
   ] },
-  { id: "task-marketing", name: "Marketing", status: "In Progress", startDate: "", endDate: "", assignee: "", kpiLink: "", subtasks: [
-    { id: "task-sub-3", name: "Revisar criativos das campanhas AdWords", status: "In Progress", startDate: "2026-06-20", endDate: "2026-07-05", assignee: "Roberto Lifschitz", kpiLink: "campanhas-adwords", subtasks: [] },
-    { id: "task-sub-4", name: "Publicar post nas redes sociais", status: "Late", startDate: "2026-06-18", endDate: "2026-06-30", assignee: "Isabela Castro", kpiLink: "social-media", subtasks: [] }
+  { id: "task-marketing", name: "Marketing", status: "In Progress", startDate: "", endDate: "", assignees: [], kpiLink: "", subtasks: [
+    { id: "task-sub-3", name: "Revisar criativos das campanhas AdWords", status: "In Progress", startDate: "2026-06-20", endDate: "2026-07-05", assignees: ["Roberto Lifschitz"], kpiLink: "campanhas-adwords", subtasks: [] },
+    { id: "task-sub-4", name: "Publicar post nas redes sociais", status: "Late", startDate: "2026-06-18", endDate: "2026-06-30", assignees: ["Isabela Castro"], kpiLink: "social-media", subtasks: [] }
   ] },
-  { id: "task-initiatives", name: "Initiatives", status: "In Progress", startDate: "", endDate: "", assignee: "", kpiLink: "", subtasks: [] },
-  { id: "task-cbth", name: "CBTH", status: "In Progress", startDate: "", endDate: "", assignee: "Isabela Castro", kpiLink: "", subtasks: [
-    { id: "task-sub-5", name: "Cobrar pagamento de federação atrasada", status: "In Progress", startDate: "2026-06-22", endDate: "2026-07-08", assignee: "Karina Bupp", kpiLink: "cbpe-pagamentos-2026", subtasks: [] }
+  { id: "task-initiatives", name: "Initiatives", status: "In Progress", startDate: "", endDate: "", assignees: [], kpiLink: "", subtasks: [] },
+  { id: "task-cbth", name: "CBTH", status: "In Progress", startDate: "", endDate: "", assignees: ["Isabela Castro"], kpiLink: "", subtasks: [
+    { id: "task-sub-5", name: "Cobrar pagamento de federação atrasada", status: "In Progress", startDate: "2026-06-22", endDate: "2026-07-08", assignees: ["Karina Bupp"], kpiLink: "cbpe-pagamentos-2026", subtasks: [] }
   ] }
 ];
 
@@ -2425,8 +2521,11 @@ function ensureTaskDefaults(t) {
   if (t.startDate === undefined) t.startDate = "";
   if (t.endDate === undefined) t.endDate = t.date || ""; // migrate old single "date" field
   delete t.date;
-  if (t.assignee === undefined) t.assignee = "";
-  if (ASSIGNEE_RENAMES[t.assignee]) t.assignee = ASSIGNEE_RENAMES[t.assignee];
+  if (t.assignees === undefined) {
+    t.assignees = t.assignee ? [t.assignee] : []; // migrate old single-assignee field
+  }
+  delete t.assignee;
+  t.assignees = t.assignees.map(n => ASSIGNEE_RENAMES[n] || n);
   if (t.kpiLink === undefined) t.kpiLink = "";
   t.subtasks.forEach(ensureTaskDefaults);
   return t;
@@ -2474,6 +2573,65 @@ function findTaskById(list, id) {
   return null;
 }
 
+// Returns { array, index } — the list a task lives in (its parent's
+// subtasks array, or the top-level tasksData array) and its position in
+// it. Used by the bulk-paste handler to insert new sibling rows at the
+// same level/context the paste happened in.
+function findTaskContainer(list, id) {
+  for (let i = 0; i < list.length; i++) {
+    if (list[i].id === id) return { array: list, index: i };
+    const found = findTaskContainer(list[i].subtasks, id);
+    if (found) return found;
+  }
+  return null;
+}
+
+// --- Parsing helpers for pasting rows copied out of Notion's table view ---
+// Notion copies a selection of rows as one line of text per row, with
+// columns separated by tabs (Name<TAB>Status<TAB>Date<TAB>Assignee), dates
+// written like "April 28, 2026" or as a range "February 9, 2026 → February
+// 13, 2026", and multiple people in one cell joined by commas.
+function parseNotionDate(str) {
+  if (!str) return "";
+  const d = new Date(str.trim());
+  return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+}
+
+function parseNotionDateRange(str) {
+  if (!str || !str.trim()) return { start: undefined, end: undefined };
+  const parts = str.split("→").map(s => s.trim()).filter(Boolean);
+  if (parts.length >= 2) return { start: parseNotionDate(parts[0]), end: parseNotionDate(parts[1]) };
+  return { start: "", end: parseNotionDate(parts[0] || "") };
+}
+
+function parseNotionStatus(str) {
+  if (!str || !str.trim()) return null;
+  const norm = str.trim().toLowerCase();
+  return TASK_STATUS_OPTIONS.find(s => s.toLowerCase() === norm) || null;
+}
+
+function parseNotionAssignees(str) {
+  if (!str || !str.trim()) return undefined;
+  const names = str.split(",").map(s => s.trim()).filter(Boolean);
+  return names.map(n => addAssigneeName(n)).filter(Boolean);
+}
+
+// One line of pasted text -> a partial task object. A line with no tabs is
+// just a name (keeps the simple "paste a plain list of names" case working).
+function parseNotionPasteLine(line) {
+  const cols = line.split("\t");
+  if (cols.length === 1) return { name: cols[0].trim() };
+  const [nameCol, statusCol, dateCol, assigneeCol] = cols;
+  const range = parseNotionDateRange(dateCol);
+  return {
+    name: (nameCol || "").trim(),
+    status: parseNotionStatus(statusCol),
+    startDate: range.start,
+    endDate: range.end,
+    assignees: parseNotionAssignees(assigneeCol)
+  };
+}
+
 function deleteTaskById(list, id) {
   const idx = list.findIndex(t => t.id === id);
   if (idx !== -1) { list.splice(idx, 1); return true; }
@@ -2510,13 +2668,7 @@ function renderTaskRow(t, depth) {
         <input type="date" class="tasks-date-input" data-id="${t.id}" data-field="endDate" value="${t.endDate}" title="Data final">
       </div>
       <div class="tasks-col-assignee">
-        ${tasksAddingAssigneeId === t.id
-          ? `<input type="text" class="tasks-assignee-new-input" data-id="${t.id}" placeholder="Nome novo…" autofocus>`
-          : `<select class="tasks-assignee-select" data-id="${t.id}">
-              <option value="" ${!t.assignee ? "selected" : ""}>—</option>
-              ${assigneesList.map(name => `<option value="${name}" ${name === t.assignee ? "selected" : ""}>${name}</option>`).join("")}
-              <option value="__add_new__">+ Adicionar nome…</option>
-            </select>`}
+        ${assigneeCellMarkup(t)}
       </div>
       <div class="tasks-col-kpi">
         <select class="tasks-kpi-select" data-id="${t.id}" title="${depth === 0 ? "" : "Deixe em branco para herdar o KPI da task acima"}">
@@ -2557,6 +2709,49 @@ function renderTasksTable() {
       renderTasksTable();
     });
   });
+  body.querySelectorAll(".tasks-name-input").forEach(input => {
+    input.addEventListener("paste", (e) => {
+      const text = (e.clipboardData || window.clipboardData).getData("text");
+      const rawLines = text.split(/\r\n|\r|\n/).filter(l => l.trim().length > 0);
+      if (rawLines.length === 0) return;
+      if (rawLines.length === 1 && !rawLines[0].includes("\t")) return; // one plain name — let the normal paste happen
+
+      e.preventDefault();
+      const container = findTaskContainer(tasksData, input.dataset.id);
+      if (!container) return;
+      const { array, index } = container;
+      const current = array[index];
+      const rows = rawLines.map(parseNotionPasteLine);
+
+      // First pasted row fills the task you pasted into (name, and status/
+      // dates/assignees too if that row had them); every other row becomes
+      // a new sibling task right after it, in that same list — so pasting
+      // into a subtask's name creates new subtasks right there, just like
+      // rows expanding in Notion/Sheets. Multiple values in the "assignee"
+      // column (comma-separated, as Notion exports multi-person cells) all
+      // get added, and any new names are added to the shared list too.
+      const first = rows[0];
+      if (first.name) current.name = first.name;
+      if (first.status) current.status = first.status;
+      if (first.startDate !== undefined) current.startDate = first.startDate;
+      if (first.endDate !== undefined) current.endDate = first.endDate;
+      if (first.assignees) current.assignees = first.assignees;
+
+      const newTasks = rows.slice(1).map((row, i) => ({
+        id: `task-${Date.now()}-${i}`,
+        name: row.name || "Nova task",
+        status: row.status || "Not Started",
+        startDate: row.startDate || "",
+        endDate: row.endDate || "",
+        assignees: row.assignees || [],
+        kpiLink: "",
+        subtasks: []
+      }));
+      array.splice(index + 1, 0, ...newTasks);
+      saveTasksData();
+      renderTasksTable();
+    });
+  });
   body.querySelectorAll(".tasks-name-input, .tasks-date-input").forEach(input => {
     input.addEventListener("change", () => {
       const t = findTaskById(tasksData, input.dataset.id);
@@ -2566,17 +2761,47 @@ function renderTasksTable() {
       if (input.classList.contains("tasks-date-input") && typeof renderGoalsGrid === "function") renderGoalsGrid();
     });
   });
+  body.querySelectorAll(".tasks-assignee-add-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      tasksAssigneePickerId = btn.dataset.id;
+      renderTasksTable();
+    });
+  });
+  body.querySelectorAll(".tasks-assignee-summary").forEach(el => {
+    el.addEventListener("click", () => {
+      tasksAssigneeExpandedId = el.dataset.id;
+      renderTasksTable();
+    });
+  });
+  body.querySelectorAll(".tasks-assignee-collapse").forEach(btn => {
+    btn.addEventListener("click", () => {
+      tasksAssigneeExpandedId = null;
+      renderTasksTable();
+    });
+  });
+  body.querySelectorAll(".tasks-assignee-remove").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const t = findTaskById(tasksData, btn.dataset.id);
+      if (!t) return;
+      t.assignees = t.assignees.filter(n => n !== btn.dataset.name);
+      saveTasksData();
+      renderTasksTable();
+    });
+  });
   body.querySelectorAll(".tasks-assignee-select").forEach(select => {
     select.addEventListener("change", () => {
       const t = findTaskById(tasksData, select.dataset.id);
       if (!t) return;
       if (select.value === "__add_new__") {
+        tasksAssigneePickerId = null;
         tasksAddingAssigneeId = select.dataset.id;
         renderTasksTable();
         return;
       }
-      t.assignee = select.value;
+      if (select.value && !t.assignees.includes(select.value)) t.assignees.push(select.value);
+      tasksAssigneePickerId = null;
       saveTasksData();
+      renderTasksTable();
     });
   });
   body.querySelectorAll(".tasks-assignee-new-input").forEach(input => {
@@ -2585,7 +2810,8 @@ function renderTasksTable() {
       const t = findTaskById(tasksData, input.dataset.id);
       tasksAddingAssigneeId = null;
       if (t && input.value.trim()) {
-        t.assignee = addAssigneeName(input.value);
+        const name = addAssigneeName(input.value);
+        if (name && !t.assignees.includes(name)) t.assignees.push(name);
         saveTasksData();
       }
       renderTasksTable();
@@ -2620,7 +2846,7 @@ function renderTasksTable() {
       const parent = findTaskById(tasksData, btn.dataset.id);
       if (!parent) return;
       const newId = "task-" + Date.now();
-      parent.subtasks.push({ id: newId, name: "Nova subtask", status: "Not Started", startDate: "", endDate: "", assignee: "", kpiLink: "", subtasks: [] });
+      parent.subtasks.push({ id: newId, name: "Nova subtask", status: "Not Started", startDate: "", endDate: "", assignees: [], kpiLink: "", subtasks: [] });
       tasksExpanded.add(parent.id);
       saveTasksData();
       renderTasksTable();
@@ -2650,7 +2876,7 @@ function renderTasksTable() {
 
 document.getElementById("tasks-add-btn").addEventListener("click", () => {
   const newId = "task-" + Date.now();
-  tasksData.push({ id: newId, name: "Nova task", status: "Not Started", startDate: "", endDate: "", assignee: "", kpiLink: "", subtasks: [] });
+  tasksData.push({ id: newId, name: "Nova task", status: "Not Started", startDate: "", endDate: "", assignees: [], kpiLink: "", subtasks: [] });
   saveTasksData();
   renderTasksTable();
 });
@@ -2701,7 +2927,7 @@ function renderTasksLateView() {
           <div class="tasks-late-item">
             <div class="tasks-late-info">
               <div class="tasks-late-name">${t.name}</div>
-              <div class="tasks-late-meta">Venceu em ${formatEntryDate(t.endDate)}${t.assignee ? " · " + t.assignee : ""}${goalName ? " · KPI: " + goalName : ""}</div>
+              <div class="tasks-late-meta">Venceu em ${formatEntryDate(t.endDate)}${t.assignees.length ? " · " + t.assignees.join(", ") : ""}${goalName ? " · KPI: " + goalName : ""}</div>
             </div>
             <select class="overdue-task-status" data-id="${t.id}">${taskStatusOptionsMarkup(t.status)}</select>
           </div>
@@ -2741,7 +2967,7 @@ function renderTasksGeneralStats() {
 
   function walk(items) {
     items.forEach(t => {
-      if (!tasksGeneralFilter || t.assignee === tasksGeneralFilter) {
+      if (!tasksGeneralFilter || t.assignees.includes(tasksGeneralFilter)) {
         total++;
         statusCounts[t.status] = (statusCounts[t.status] || 0) + 1;
         if (t.startDate && t.endDate) {
@@ -2893,6 +3119,22 @@ function fillFor(name) {
   return STATUS_COLORS[rec.status] ? STATUS_COLORS[rec.status].fill : STATUS_COLORS["Not Started"].fill;
 }
 
+// path.centroid() on the whole country can land in open water for countries
+// made of scattered islands/archipelagos (Canada's arctic islands pull the
+// geometric center off the mainland, for example). This instead finds the
+// single largest landmass piece and centers the icon on that piece alone.
+function mainLandCentroid(feature) {
+  const geom = feature.geometry;
+  if (geom.type !== "MultiPolygon") return path.centroid(feature);
+  let best = null, bestArea = -1;
+  geom.coordinates.forEach(coords => {
+    const piece = { type: "Feature", geometry: { type: "Polygon", coordinates: coords } };
+    const area = Math.abs(path.area(piece));
+    if (area > bestArea) { bestArea = area; best = piece; }
+  });
+  return best ? path.centroid(best) : path.centroid(feature);
+}
+
 let crownsLayer;
 
 function renderCrowns() {
@@ -2910,13 +3152,45 @@ function renderCrowns() {
       update => update,
       exit => exit.remove()
     )
-    .attr("transform", d => `translate(${path.centroid(d)})`);
+    .attr("transform", d => `translate(${mainLandCentroid(d)})`);
+}
+
+// Two arrows pointing at each other, styled just like the star (same
+// yellow fill, same dark outline) — marks countries with the "Trading"
+// checkbox on (Federations only).
+const TRADING_ICON_MARKUP = `
+  <polygon points="-6,-3.4 1,-3.4 1,-5.2 6.5,-2 1,1.2 1,-0.6 -6,-0.6" fill="#f2b93d" stroke="#7a4f0a" stroke-width="0.6"/>
+  <polygon points="6,3.4 -1,3.4 -1,5.2 -6.5,2 -1,-1.2 -1,0.6 6,0.6" fill="#f2b93d" stroke="#7a4f0a" stroke-width="0.6"/>
+`;
+
+let tradingLayer;
+
+function renderTradingIcons() {
+  if (!tradingLayer || inStateView) return;
+  const tradingCountries = isCommitteeView() ? [] : allCountries.filter(f => getRecord(f.properties.name).trading);
+  tradingLayer.selectAll("g.trading-marker")
+    .data(tradingCountries, d => d.properties.name)
+    .join(
+      enter => enter.append("g")
+        .attr("class", "trading-marker")
+        .attr("pointer-events", "none")
+        .html(TRADING_ICON_MARKUP),
+      update => update,
+      exit => exit.remove()
+    )
+    .attr("transform", d => {
+      const [cx, cy] = mainLandCentroid(d);
+      const hasStarToo = isMemberComplete(d.properties.name); // only these ever get a trading icon (committee view is filtered out above)
+      const dx = hasStarToo ? 9 : 0; // only nudge aside when a star is also sitting right there
+      return `translate(${cx + dx}, ${cy})`;
+    });
 }
 
 function refreshMapColors() {
   if (!inStateView) {
     svg.selectAll("path.country").attr("fill", d => fillFor(d.properties.name));
     renderCrowns();
+    renderTradingIcons();
   }
   renderLegend();
 }
@@ -2952,10 +3226,13 @@ function renderWorldMap() {
 
   crownsLayer = svg.append("g").attr("id", "crowns-layer");
   renderCrowns();
+  tradingLayer = svg.append("g").attr("id", "trading-layer");
+  renderTradingIcons();
 
   highlightHalo.raise();
   highlightPath.raise();
   crownsLayer.raise();
+  tradingLayer.raise();
 
   if (activeCountry && activeFeature) {
     highlightHalo.attr("d", path(activeFeature));
@@ -3330,6 +3607,12 @@ const panelStatus = document.getElementById("panel-status");
 const checklistEl = document.getElementById("checklist");
 const panelWebsite = document.getElementById("panel-website");
 const panelPartner = document.getElementById("panel-partner");
+const panelTrading = document.getElementById("panel-trading");
+panelTrading.addEventListener("change", () => {
+  if (!activeCountry || isCommitteeView()) return;
+  setRecord(activeCountry, { trading: panelTrading.checked });
+  renderTradingIcons();
+});
 const panelSocial = document.getElementById("panel-social");
 const panelTournaments = document.getElementById("panel-tournaments");
 const panelStar = document.getElementById("panel-star");
@@ -3420,6 +3703,8 @@ function selectCountry(name, feature) {
   checklistFieldEl.classList.toggle("hidden", committeeMode);
   tournamentsFieldEl.classList.toggle("hidden", committeeMode);
   committeeStarFieldEl.classList.toggle("hidden", !committeeMode);
+  document.getElementById("trading-field").classList.toggle("hidden", committeeMode);
+  panelTrading.checked = !!rec.trading;
   if (!committeeMode) {
     CHECKLIST_ITEMS.forEach(item => {
       document.getElementById(`check-${item.key}`).checked = !!rec.checklist[item.key];
