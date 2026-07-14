@@ -3617,7 +3617,7 @@ async function renderStateMap(countryName) {
 
 
 Promise.all([
-  d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json"),
+  d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json"),
   loadFromCloud()
 ]).then(([world]) => {
   allCountries = topojson.feature(world, world.objects.countries).features;
