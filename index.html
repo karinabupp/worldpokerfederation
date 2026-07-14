@@ -294,8 +294,26 @@
     align-items: center;
     border-bottom: 1px solid var(--border);
     min-height: 56px;
+    transition: box-shadow 0.1s ease;
   }
   .tasks-row:last-child { border-bottom: none; }
+  .tasks-drag-handle {
+    flex-shrink: 0;
+    width: 14px;
+    text-align: center;
+    color: var(--text-muted);
+    cursor: grab;
+    opacity: 0;
+    font-size: 13px;
+    line-height: 1;
+    user-select: none;
+  }
+  .tasks-row:hover .tasks-drag-handle { opacity: 0.55; }
+  .tasks-drag-handle:hover { opacity: 1 !important; }
+  .tasks-drag-handle:active { cursor: grabbing; }
+  .tasks-row-selected { box-shadow: inset 3px 0 0 var(--accent); }
+  .tasks-row-dragging { opacity: 0.4; }
+  .tasks-row-drop-target { box-shadow: inset 0 0 0 2px var(--accent); }
   .tasks-head-row {
     font-size: 12px;
     font-weight: 700;
@@ -2586,6 +2604,12 @@ function findTaskContainer(list, id) {
   return null;
 }
 
+// True if `descendantId` lives anywhere inside `ancestorTask`'s subtree —
+// used to stop a drag-and-drop from nesting a task inside its own child.
+function isDescendantOf(ancestorTask, descendantId) {
+  return !!findTaskById(ancestorTask.subtasks, descendantId);
+}
+
 // --- Parsing helpers for pasting rows copied out of Notion's table view ---
 // Notion copies a selection of rows as one line of text per row, with
 // columns separated by tabs (Name<TAB>Status<TAB>Date<TAB>Assignee), dates
@@ -2643,6 +2667,8 @@ function deleteTaskById(list, id) {
 
 let tasksExpanded = new Set(TASKS_SEED_DATA.map(t => t.id));
 let tasksConfirmDeleteId = null;
+let tasksSelectedIds = new Set(); // subtasks currently checked for bulk drag/move
+let tasksDragIds = []; // ids actually being dragged in the current drag gesture
 
 function taskStatusOptionsMarkup(selected) {
   return TASK_STATUS_OPTIONS.map(s => `<option value="${s}" ${s === selected ? "selected" : ""}>${s}</option>`).join("");
@@ -2652,9 +2678,13 @@ function renderTaskRow(t, depth) {
   const hasChildren = t.subtasks.length > 0;
   const expanded = tasksExpanded.has(t.id);
   const colors = TASK_STATUS_COLORS[t.status] || TASK_STATUS_COLORS["Not Started"];
+  const isSub = depth > 0;
+  const rowStyle = isSub ? ` style="background:${colors.bg}"` : "";
+  const selected = isSub && tasksSelectedIds.has(t.id);
   let html = `
-    <div class="tasks-row" data-id="${t.id}">
+    <div class="tasks-row ${selected ? "tasks-row-selected" : ""}" data-id="${t.id}"${rowStyle}>
       <div class="tasks-col-name" style="padding-left:${16 + depth * 26}px">
+        ${isSub ? `<span class="tasks-drag-handle" data-id="${t.id}" draggable="true" title="Arrastar para mover">⠿</span>` : ""}
         <button class="tasks-toggle ${hasChildren ? "" : "empty"}" data-id="${t.id}" type="button">${expanded ? "▼" : "▶"}</button>
         <input class="tasks-name-input ${depth === 0 ? "tasks-name-top" : ""}" data-id="${t.id}" data-field="name" value="${t.name}">
       </div>
@@ -2706,6 +2736,73 @@ function renderTasksTable() {
     btn.addEventListener("click", () => {
       const id = btn.dataset.id;
       if (tasksExpanded.has(id)) tasksExpanded.delete(id); else tasksExpanded.add(id);
+      renderTasksTable();
+    });
+  });
+  // Ctrl/Cmd+click a subtask row to add it to the selection (for dragging
+  // several at once) — clicking without a modifier key just interacts with
+  // whatever field you clicked normally.
+  body.querySelectorAll(".tasks-row").forEach(row => {
+    row.addEventListener("click", (e) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const id = row.dataset.id;
+      const container = findTaskContainer(tasksData, id);
+      if (!container || container.array === tasksData) return; // top-level tasks aren't selectable
+      e.preventDefault();
+      if (tasksSelectedIds.has(id)) tasksSelectedIds.delete(id); else tasksSelectedIds.add(id);
+      renderTasksTable();
+    });
+  });
+  // Drag-and-drop: grab a subtask by the small handle that appears on
+  // hover (like Notion's drag handle) and drop it onto any row — a
+  // top-level task or another subtask — to move it there as a child of
+  // whatever you dropped it on. If several rows are Ctrl/Cmd-selected and
+  // you drag one of them, all the selected ones move together.
+  body.querySelectorAll(".tasks-drag-handle").forEach(handle => {
+    handle.addEventListener("dragstart", (e) => {
+      const id = handle.dataset.id;
+      tasksDragIds = tasksSelectedIds.has(id) && tasksSelectedIds.size > 1 ? [...tasksSelectedIds] : [id];
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", id);
+      const row = handle.closest(".tasks-row");
+      if (row) {
+        e.dataTransfer.setDragImage(row, 20, 20);
+        row.classList.add("tasks-row-dragging");
+      }
+    });
+    handle.addEventListener("dragend", () => {
+      const row = handle.closest(".tasks-row");
+      if (row) row.classList.remove("tasks-row-dragging");
+      document.querySelectorAll(".tasks-row-drop-target").forEach(r => r.classList.remove("tasks-row-drop-target"));
+    });
+  });
+  body.querySelectorAll(".tasks-row").forEach(row => {
+    row.addEventListener("dragover", (e) => {
+      if (!tasksDragIds.length) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      row.classList.add("tasks-row-drop-target");
+    });
+    row.addEventListener("dragleave", () => row.classList.remove("tasks-row-drop-target"));
+    row.addEventListener("drop", (e) => {
+      e.preventDefault();
+      row.classList.remove("tasks-row-drop-target");
+      const targetId = row.dataset.id;
+      const target = findTaskById(tasksData, targetId);
+      if (!target || !tasksDragIds.length) return;
+      if (tasksDragIds.includes(targetId)) { tasksDragIds = []; return; } // can't drop onto itself
+
+      tasksDragIds.forEach(dragId => {
+        if (isDescendantOf(findTaskById(tasksData, dragId) || { subtasks: [] }, targetId)) return; // would create a loop
+        const container = findTaskContainer(tasksData, dragId);
+        if (!container) return;
+        const [moved] = container.array.splice(container.index, 1);
+        target.subtasks.push(moved);
+      });
+      tasksExpanded.add(targetId);
+      tasksSelectedIds.clear();
+      tasksDragIds = [];
+      saveTasksData();
       renderTasksTable();
     });
   });
