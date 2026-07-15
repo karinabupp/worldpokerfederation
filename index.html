@@ -4214,7 +4214,7 @@ function renderLegend() {
   rows.push({ key: "__trading_member__", label: "Trading Member", color: STATUS_COLORS["Member"].fill, count: tradingCount, names: tradingNames, icon: "trading" });
   rows.push({ key: "__star_member__", label: "Star Member", color: STATUS_COLORS["Member"].fill, count: memberCompleteCount, names: starMemberNames, icon: "star" });
 
-  const totalMembers = counts["Member"] + memberCompleteCount;
+  const totalMembers = counts["Member"];
   legendRows.innerHTML = legendRowsMarkup(rows, total) + `<div class="legend-total-row">
     <span>Total Members</span>
     <span class="legend-total-value">${totalMembers}</span>
