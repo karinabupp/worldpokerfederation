@@ -1267,7 +1267,7 @@
   #overdue-modal {
     background: #ffffff;
     border-radius: 12px;
-    width: 460px;
+    width: 620px;
     max-width: 92vw;
     max-height: 78vh;
     display: flex;
@@ -1292,22 +1292,34 @@
     border-radius: 4px;
   }
   #overdue-modal-close:hover { background: var(--land-default); color: var(--text); }
-  #overdue-modal-body { padding: 10px 18px 18px; overflow-y: auto; }
-  .overdue-task-item { padding: 10px 0; border-bottom: 1px solid var(--border); }
+  #overdue-modal-body { padding: 6px 18px 18px; overflow-y: auto; }
+  .overdue-task-item { padding: 14px 0; border-bottom: 1px solid var(--border); }
   .overdue-task-item:last-child { border-bottom: none; }
-  .overdue-task-row { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
-  .overdue-task-name { font-size: 13.5px; font-weight: 600; color: var(--text); }
-  .overdue-task-due { font-size: 12.5px; color: #791f1f; }
-  .overdue-task-sep { color: var(--text-muted); font-size: 12px; }
-  .overdue-task-meta { font-size: 11.5px; color: var(--text-muted); margin-top: 3px; }
+  .overdue-task-name { display: block; font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+  .overdue-task-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .overdue-task-due {
+    font-size: 12.5px;
+    color: #791f1f;
+    background: #fbe9e9;
+    border-radius: 6px;
+    padding: 3px 9px;
+    flex-shrink: 0;
+  }
+  .overdue-task-meta { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
   .overdue-task-status {
     border: 1px solid var(--border);
     background: #ffffff;
     border-radius: 6px;
-    padding: 4px 7px;
-    font-size: 12px;
+    padding: 5px 9px;
+    font-size: 12.5px;
     color: var(--text);
     cursor: pointer;
+    flex-shrink: 0;
   }
   .overdue-task-empty { font-size: 13px; color: var(--text-muted); padding: 20px 0; text-align: center; }
 </style>
@@ -2618,14 +2630,12 @@ function openOverdueModal(goalId) {
   bodyEl.innerHTML = tasks.length
     ? tasks.map(t => `
         <div class="overdue-task-item">
+          <span class="overdue-task-name">${t.name}</span>
           <div class="overdue-task-row">
-            <span class="overdue-task-name">${t.name}</span>
-            <span class="overdue-task-sep">·</span>
             <span class="overdue-task-due">Venceu em ${formatEntryDate(t.endDate)}</span>
-            <span class="overdue-task-sep">·</span>
             <select class="overdue-task-status" data-id="${t.id}" data-goal-id="${goalId}">${taskStatusOptionsMarkup(t.status)}</select>
           </div>
-          ${t.assignees.length ? `<div class="overdue-task-meta">${t.assignees.join(", ")}</div>` : ""}
+          ${t.assignees.length ? `<div class="overdue-task-meta">👤 ${t.assignees.join(", ")}</div>` : ""}
         </div>
       `).join("")
     : `<div class="overdue-task-empty">Nenhuma task em atraso.</div>`;
