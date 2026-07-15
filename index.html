@@ -851,13 +851,13 @@
     padding: 12px;
   }
   #map { width: 100%; height: auto; display: block; background: var(--water); border-radius: 8px; }
-  #map-search-bar { margin: 10px 0 14px; }
-  #map-search-wrap {
+  .map-search-bar { margin: 10px 0 14px; }
+  .map-search-wrap {
     position: relative;
     display: flex;
     align-items: center;
   }
-  #map-search-wrap svg {
+  .map-search-wrap svg {
     width: 13px;
     height: 13px;
     flex-shrink: 0;
@@ -868,7 +868,7 @@
     transform: translateY(-50%);
     pointer-events: none;
   }
-  #map-search-input {
+  .map-search-input {
     width: 100%;
     padding: 5px 26px 5px 24px;
     border: 1px solid var(--border);
@@ -878,11 +878,11 @@
     background: var(--bg);
     box-sizing: border-box;
   }
-  #map-search-input:focus {
+  .map-search-input:focus {
     outline: none;
     border-color: var(--accent);
   }
-  #map-search-go {
+  .map-search-go {
     position: absolute;
     right: 3px;
     top: 50%;
@@ -894,9 +894,9 @@
     cursor: pointer;
     display: flex;
   }
-  #map-search-go svg { position: static; width: 13px; height: 13px; transform: none; }
-  #map-search-go:hover { color: var(--accent); }
-  #map-search-reset {
+  .map-search-go svg { position: static; width: 13px; height: 13px; transform: none; }
+  .map-search-go:hover { color: var(--accent); }
+  .map-search-reset {
     margin-top: 5px;
     border: none;
     background: none;
@@ -906,9 +906,9 @@
     cursor: pointer;
     display: none;
   }
-  #map-search-reset.show { display: inline-block; }
-  #map-search-reset:hover { text-decoration: underline; }
-  #map-search-msg {
+  .map-search-reset.show { display: inline-block; }
+  .map-search-reset:hover { text-decoration: underline; }
+  .map-search-msg {
     font-size: 11px;
     color: var(--text-muted);
     margin-top: 4px;
@@ -1461,17 +1461,17 @@
     <div id="legend-view" class="side-card">
       <h2 id="legend-title">Federations</h2>
       <p id="legend-total"></p>
-      <div id="map-search-bar">
-        <div id="map-search-wrap">
+      <div id="map-search-bar" class="map-search-bar">
+        <div id="map-search-wrap" class="map-search-wrap">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="map-search-input" placeholder="Buscar país..." list="map-search-list" autocomplete="off">
+          <input type="text" id="map-search-input" class="map-search-input" placeholder="Buscar país..." list="map-search-list" autocomplete="off">
           <datalist id="map-search-list"></datalist>
-          <button type="button" id="map-search-go" aria-label="Buscar">
+          <button type="button" id="map-search-go" class="map-search-go" aria-label="Buscar">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12,5 19,12 12,19"/></svg>
           </button>
         </div>
-        <button type="button" id="map-search-reset">Ver mundo todo</button>
-        <div id="map-search-msg"></div>
+        <button type="button" id="map-search-reset" class="map-search-reset">Ver mundo todo</button>
+        <div id="map-search-msg" class="map-search-msg"></div>
       </div>
       <div id="legend-rows"></div>
     </div>
@@ -1538,6 +1538,18 @@
       </div>
 
       <div id="state-legend-fields" class="hidden">
+        <div id="state-search-bar" class="map-search-bar">
+          <div id="state-search-wrap" class="map-search-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="state-search-input" class="map-search-input" placeholder="Buscar região..." list="state-search-list" autocomplete="off">
+            <datalist id="state-search-list"></datalist>
+            <button type="button" id="state-search-go" class="map-search-go" aria-label="Buscar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12,5 19,12 12,19"/></svg>
+            </button>
+          </div>
+          <button type="button" id="state-search-reset" class="map-search-reset">Ver mapa completo</button>
+          <div id="state-search-msg" class="map-search-msg"></div>
+        </div>
         <p id="state-legend-total" class="field-hint" style="margin-bottom:14px;"></p>
         <div id="state-legend-rows"></div>
       </div>
@@ -3591,6 +3603,7 @@ const path = d3.geoPath(projection);
 
 let highlightHalo, highlightPath;
 let currentStatePath = null;
+let currentStateFeatures = []; // features currently loaded in state view, for the state search box
 let stateHighlight = null;
 
 function starPoints(cx, cy, outerR, innerR) {
@@ -3706,6 +3719,9 @@ function renderWorldMap() {
   showCountryFieldsView();
   document.getElementById("back-to-world")?.remove();
   svg.selectAll("*").remove();
+  svg.attr("viewBox", WORLD_VIEWBOX);
+  document.getElementById("map-search-reset")?.classList.remove("show");
+  document.getElementById("state-search-reset")?.classList.remove("show");
 
   highlightHalo = svg.append("path").attr("class", "highlight-halo").attr("d", null);
   highlightPath = svg.append("path").attr("class", "highlight").attr("d", null);
@@ -3891,6 +3907,9 @@ async function renderStateMap(countryName) {
   inStateView = true;
   svg.selectAll("*").remove();
   document.getElementById("back-to-world")?.remove();
+  svg.attr("viewBox", WORLD_VIEWBOX);
+  document.getElementById("map-search-reset")?.classList.remove("show");
+  document.getElementById("state-search-reset")?.classList.remove("show");
 
   svg.append("text")
     .attr("x", width / 2)
@@ -3930,6 +3949,8 @@ async function renderStateMap(countryName) {
     : d3.geoMercator().preclip(sink => sink).fitExtent([[20, 20], [width - 20, height - 20]], fc);
   const localPath = d3.geoPath(localProjection);
   currentStatePath = localPath;
+  currentStateFeatures = features;
+  populateStateSearchList();
   const committeeMode = isCommitteeView();
   const brazilFedMode = isBrazilFederationsMode(countryName);
   // Federations: only US/UK/China have the generic per-state pipeline (unchanged).
@@ -3996,14 +4017,17 @@ Promise.all([
   loadFromCloud()
 ]).then(([world]) => {
   allCountries = topojson.feature(world, world.objects.countries).features;
-  // world-atlas's admin-0 country set (like Natural Earth) folds Hong Kong into
-  // China and doesn't give it its own polygon, unlike Taiwan which is already
-  // a separate entry. Pull Hong Kong's shape out of the China state-level data
-  // and add it as its own top-level feature so it shows on the world map too.
-  if (!allCountries.some(f => f.properties.name === "Hong Kong")) {
-    const hk = CHINA_GEOJSON.features.find(f => f.properties.name === "Hong Kong");
-    if (hk) allCountries.push(hk);
-  }
+  // world-atlas's admin-0 country set (like Natural Earth) folds Hong Kong and
+  // Macau into China and doesn't give them their own polygons, unlike Taiwan
+  // which is already a separate entry. Pull their shapes out of the China
+  // state-level data and add them as their own top-level features so they
+  // show on the world map too (Macau's polygon is tiny — the search box is
+  // the easiest way to find and zoom to it).
+  ["Hong Kong", "Macau"].forEach(name => {
+    if (allCountries.some(f => f.properties.name === name)) return;
+    const feat = CHINA_GEOJSON.features.find(f => f.properties.name === name);
+    if (feat) allCountries.push(feat);
+  });
   renderLegend();
   renderWorldMap();
   populateMapSearchList();
@@ -4401,6 +4425,75 @@ mapSearchInput.addEventListener("keydown", e => {
 });
 mapSearchInput.addEventListener("change", runMapSearch);
 mapSearchInput.addEventListener("input", () => { mapSearchMsg.textContent = ""; });
+
+// --- Region search box (state/province maps, e.g. finding Macau inside
+// China's map — same idea as the country search above, just scoped to
+// whichever country's regions are currently loaded). ---
+const stateSearchInput = document.getElementById("state-search-input");
+const stateSearchGo = document.getElementById("state-search-go");
+const stateSearchReset = document.getElementById("state-search-reset");
+const stateSearchMsg = document.getElementById("state-search-msg");
+const stateSearchList = document.getElementById("state-search-list");
+
+function populateStateSearchList() {
+  const names = currentStateFeatures
+    .map(f => f.properties.name)
+    .sort((a, b) => a.localeCompare(b));
+  stateSearchList.innerHTML = names.map(n => `<option value="${n}"></option>`).join("");
+}
+
+function findStateFeature(query) {
+  const q = normalizeSearchStr(query);
+  if (!q) return null;
+  let best = null;
+  currentStateFeatures.forEach(f => {
+    const name = normalizeSearchStr(f.properties.name);
+    if (name === q) { best = f; return; }
+    if (!best && name.startsWith(q)) best = f;
+    if (!best && name.includes(q)) best = f;
+  });
+  return best;
+}
+
+function zoomToStateFeature(feature) {
+  if (!currentStatePath) return;
+  const [[x0, y0], [x1, y1]] = currentStatePath.bounds(feature);
+  const w = Math.max(x1 - x0, 14);
+  const h = Math.max(y1 - y0, 14);
+  const pad = 0.6;
+  const vx = x0 - w * pad;
+  const vy = y0 - h * pad;
+  const vw = w * (1 + 2 * pad);
+  const vh = h * (1 + 2 * pad);
+  svg.transition().duration(500).attr("viewBox", `${vx} ${vy} ${vw} ${vh}`);
+  stateSearchReset.classList.add("show");
+}
+
+function resetStateMapZoom() {
+  svg.transition().duration(400).attr("viewBox", WORLD_VIEWBOX);
+  stateSearchReset.classList.remove("show");
+}
+
+function runStateSearch() {
+  const query = stateSearchInput.value;
+  if (!query.trim() || !inStateView || !activeCountry) return;
+  const feature = findStateFeature(query);
+  if (!feature) {
+    stateSearchMsg.textContent = `Região não encontrada: "${query}"`;
+    return;
+  }
+  stateSearchMsg.textContent = "";
+  selectState(activeCountry, feature.properties.name, feature);
+  zoomToStateFeature(feature);
+}
+
+stateSearchGo.addEventListener("click", runStateSearch);
+stateSearchReset.addEventListener("click", resetStateMapZoom);
+stateSearchInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") { e.preventDefault(); runStateSearch(); }
+});
+stateSearchInput.addEventListener("change", runStateSearch);
+stateSearchInput.addEventListener("input", () => { stateSearchMsg.textContent = ""; });
 
 // --- Per-state pipeline UI (currently: United States of America) ---
 const countryFieldsEl = document.getElementById("country-fields");
