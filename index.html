@@ -290,13 +290,67 @@
   #tasks-table { background: #ffffff; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
   .tasks-row {
     display: grid;
-    grid-template-columns: 1fr 150px 130px 130px 200px 240px 158px;
+    grid-template-columns: 30px 1fr 150px 130px 130px 200px 240px 158px;
     align-items: center;
     border-bottom: 1px solid var(--border);
     min-height: 56px;
     transition: box-shadow 0.1s ease;
   }
   .tasks-row:last-child { border-bottom: none; }
+  .tasks-col-select { display: flex; align-items: center; justify-content: center; padding: 0 !important; }
+  .tasks-row-checkbox { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent); }
+  #tasks-bulk-bar {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: #eef3fb;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  #tasks-bulk-bar.show { display: flex; }
+  #tasks-bulk-count { font-weight: 600; color: var(--text); }
+  #tasks-bulk-delete {
+    border: 1px solid #e24b4a;
+    background: #ffffff;
+    color: #e24b4a;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #tasks-bulk-delete:hover { background: #e24b4a; color: #ffffff; }
+  #tasks-bulk-clear {
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  #tasks-bulk-actions { display: flex; align-items: center; gap: 10px; }
+  #tasks-bulk-confirm { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  #tasks-bulk-actions.hidden, #tasks-bulk-confirm.hidden { display: none; }
+  #tasks-bulk-confirm-yes {
+    border: 1px solid #e24b4a;
+    background: #e24b4a;
+    color: #ffffff;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #tasks-bulk-confirm-no {
+    border: 1px solid var(--border);
+    background: #ffffff;
+    color: var(--text);
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 12px;
+    cursor: pointer;
+  }
   .tasks-drag-handle {
     flex-shrink: 0;
     width: 14px;
@@ -436,6 +490,57 @@
     line-height: 1;
   }
   .tasks-assignee-collapse:hover { background: var(--land-default); color: var(--text); }
+  .tasks-col-assignee-head { display: flex; align-items: center; gap: 6px; }
+  .tasks-head-row .tasks-col-assignee { position: relative; }
+  #tasks-manage-assignees-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 2px;
+    line-height: 1;
+  }
+  #tasks-manage-assignees-btn:hover { color: var(--accent); }
+  #tasks-manage-assignees-popover {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 6px;
+    z-index: 40;
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    padding: 10px;
+    width: 240px;
+    display: none;
+  }
+  #tasks-manage-assignees-popover.show { display: block; }
+  .tasks-manage-title { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 8px; }
+  .tasks-manage-row { display: flex; align-items: center; gap: 6px; padding: 4px 0; }
+  .tasks-manage-name-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: 1px solid transparent;
+    background: transparent;
+    font-size: 13px;
+    color: var(--text);
+    padding: 4px 6px;
+    border-radius: 5px;
+  }
+  .tasks-manage-name-input:focus { border-color: var(--border-strong); background: var(--bg); outline: none; }
+  .tasks-manage-delete-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 13px;
+    flex-shrink: 0;
+    padding: 2px 4px;
+  }
+  .tasks-manage-delete-btn:hover { color: #e24b4a; }
+  .tasks-manage-empty { font-size: 12px; color: var(--text-muted); padding: 4px 0; }
   .tasks-kpi-select {
     border: 1px solid var(--border);
     background: #ffffff;
@@ -746,71 +851,68 @@
     padding: 12px;
   }
   #map { width: 100%; height: auto; display: block; background: var(--water); border-radius: 8px; }
-  #map-search-bar {
+  #map-search-bar { margin: 10px 0 14px; }
+  #map-search-wrap {
+    position: relative;
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 10px;
   }
-  #map-search-bar svg {
-    width: 16px;
-    height: 16px;
+  #map-search-wrap svg {
+    width: 13px;
+    height: 13px;
     flex-shrink: 0;
     color: var(--text-muted);
     position: absolute;
-    left: 10px;
+    left: 8px;
     top: 50%;
     transform: translateY(-50%);
     pointer-events: none;
   }
-  #map-search-wrap {
-    position: relative;
-    flex: 1 1 auto;
-    display: flex;
-    align-items: center;
-  }
   #map-search-input {
     width: 100%;
-    padding: 8px 10px 8px 32px;
+    padding: 5px 26px 5px 24px;
     border: 1px solid var(--border);
-    border-radius: 8px;
-    font-size: 13px;
+    border-radius: 6px;
+    font-size: 12px;
     color: var(--text);
     background: var(--bg);
+    box-sizing: border-box;
   }
   #map-search-input:focus {
     outline: none;
     border-color: var(--accent);
   }
   #map-search-go {
-    border: 1px solid var(--border);
-    background: var(--panel);
-    color: var(--text);
-    border-radius: 8px;
-    padding: 8px 12px;
-    font-size: 13px;
+    position: absolute;
+    right: 3px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    padding: 4px;
     cursor: pointer;
-    flex-shrink: 0;
+    display: flex;
   }
-  #map-search-go:hover { border-color: var(--border-strong); }
+  #map-search-go svg { position: static; width: 13px; height: 13px; transform: none; }
+  #map-search-go:hover { color: var(--accent); }
   #map-search-reset {
-    border: 1px solid var(--border);
-    background: var(--panel);
+    margin-top: 5px;
+    border: none;
+    background: none;
     color: var(--accent);
-    border-radius: 8px;
-    padding: 8px 12px;
-    font-size: 13px;
+    font-size: 11px;
+    padding: 0;
     cursor: pointer;
-    flex-shrink: 0;
     display: none;
   }
   #map-search-reset.show { display: inline-block; }
-  #map-search-reset:hover { border-color: var(--accent); }
+  #map-search-reset:hover { text-decoration: underline; }
   #map-search-msg {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text-muted);
-    margin: -4px 0 8px 2px;
-    min-height: 14px;
+    margin-top: 4px;
+    min-height: 13px;
   }
   .legend-icon { width: 12px; height: 12px; flex-shrink: 0; display: block; }
   path.country {
@@ -851,7 +953,7 @@
   .side-card.closed { display: none; }
 
   #legend-view h2 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
-  #legend-total { font-size: 14px; color: var(--text-muted); margin: 0 0 24px; }
+  #legend-total { font-size: 14px; color: var(--text-muted); margin: 0; }
   .legend-row {
     display: flex;
     align-items: center;
@@ -1258,12 +1360,31 @@
       </div>
     </div>
     <div id="tasks-table">
+      <div id="tasks-bulk-bar">
+        <span id="tasks-bulk-count"></span>
+        <div id="tasks-bulk-actions">
+          <button id="tasks-bulk-delete" type="button">Excluir selecionadas</button>
+          <button id="tasks-bulk-clear" type="button">Cancelar seleção</button>
+        </div>
+        <div id="tasks-bulk-confirm" class="hidden">
+          <span>Excluir as tasks selecionadas?</span>
+          <button id="tasks-bulk-confirm-yes" type="button">Sim, excluir</button>
+          <button id="tasks-bulk-confirm-no" type="button">Cancelar</button>
+        </div>
+      </div>
       <div class="tasks-row tasks-head-row">
+        <div class="tasks-col-select"></div>
         <div class="tasks-col-name">Nome</div>
         <div class="tasks-col-status">Status</div>
         <div class="tasks-col-date">Início</div>
         <div class="tasks-col-date">Fim</div>
-        <div class="tasks-col-assignee">Responsável</div>
+        <div class="tasks-col-assignee">
+          <div class="tasks-col-assignee-head">
+            <span>Responsável</span>
+            <button id="tasks-manage-assignees-btn" type="button" title="Editar lista de responsáveis">⚙</button>
+          </div>
+          <div id="tasks-manage-assignees-popover"></div>
+        </div>
         <div class="tasks-col-kpi">KPI associado</div>
         <div class="tasks-col-actions"></div>
       </div>
@@ -1308,23 +1429,25 @@
 
 <div id="main">
   <div id="wrap">
-    <div id="map-search-bar">
-      <div id="map-search-wrap">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="map-search-input" placeholder="Buscar país..." list="map-search-list" autocomplete="off">
-        <datalist id="map-search-list"></datalist>
-      </div>
-      <button type="button" id="map-search-go">Buscar</button>
-      <button type="button" id="map-search-reset">Ver mundo todo</button>
-    </div>
-    <div id="map-search-msg"></div>
     <svg id="map" viewBox="0 0 960 500"></svg>
   </div>
 
   <div id="sidebar">
     <div id="legend-view" class="side-card">
-      <h2 id="legend-title">Status dos países</h2>
+      <h2 id="legend-title">Federations</h2>
       <p id="legend-total"></p>
+      <div id="map-search-bar">
+        <div id="map-search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="map-search-input" placeholder="Buscar país..." list="map-search-list" autocomplete="off">
+          <datalist id="map-search-list"></datalist>
+          <button type="button" id="map-search-go" aria-label="Buscar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12,5 19,12 12,19"/></svg>
+          </button>
+        </div>
+        <button type="button" id="map-search-reset">Ver mundo todo</button>
+        <div id="map-search-msg"></div>
+      </div>
       <div id="legend-rows"></div>
     </div>
 
@@ -2561,6 +2684,99 @@ function addAssigneeName(name) {
   return trimmed;
 }
 
+function walkAllTasks(list, fn) {
+  list.forEach(t => { fn(t); walkAllTasks(t.subtasks, fn); });
+}
+
+// Renaming/removing a person from the shared list should also update every
+// task that already has them assigned, so the change is consistent
+// everywhere instead of leaving stale names stuck on old tasks.
+function renameAssigneeEverywhere(oldName, newName) {
+  walkAllTasks(tasksData, t => {
+    if (!t.assignees.includes(oldName)) return;
+    t.assignees = t.assignees.map(n => (n === oldName ? newName : n));
+    // dedupe in case they were already also assigned under the new name
+    t.assignees = [...new Set(t.assignees)];
+  });
+  saveTasksData();
+}
+
+function removeAssigneeEverywhere(name) {
+  walkAllTasks(tasksData, t => {
+    t.assignees = t.assignees.filter(n => n !== name);
+  });
+  saveTasksData();
+}
+
+// --- "Editar lista de responsáveis" popover (rename/delete shared names) ---
+let tasksManageAssigneesOpen = false;
+
+function renderManageAssigneesPopover() {
+  const pop = document.getElementById("tasks-manage-assignees-popover");
+  pop.classList.toggle("show", tasksManageAssigneesOpen);
+  if (!tasksManageAssigneesOpen) { pop.innerHTML = ""; return; }
+  pop.innerHTML = `
+    <div class="tasks-manage-title">Responsáveis</div>
+    ${assigneesList.length ? assigneesList.map(name => `
+      <div class="tasks-manage-row">
+        <input type="text" class="tasks-manage-name-input" data-old="${name.replace(/"/g, "&quot;")}" value="${name.replace(/"/g, "&quot;")}">
+        <button type="button" class="tasks-manage-delete-btn" data-name="${name.replace(/"/g, "&quot;")}" title="Excluir">🗑</button>
+      </div>
+    `).join("") : `<div class="tasks-manage-empty">Nenhum responsável ainda.</div>`}
+  `;
+  pop.querySelectorAll(".tasks-manage-name-input").forEach(input => {
+    function commitRename() {
+      const oldName = input.dataset.old;
+      const newName = input.value.trim();
+      if (!newName || newName === oldName) { input.value = oldName; return; }
+      const dupe = assigneesList.find(n => n.toLowerCase() === newName.toLowerCase() && n !== oldName);
+      const idx = assigneesList.indexOf(oldName);
+      if (idx === -1) return;
+      if (dupe) {
+        // renaming onto an existing name — merge into it instead of
+        // creating a duplicate entry in the list.
+        assigneesList.splice(idx, 1);
+        renameAssigneeEverywhere(oldName, dupe);
+      } else {
+        assigneesList[idx] = newName;
+        renameAssigneeEverywhere(oldName, newName);
+      }
+      saveAssigneesList();
+      renderManageAssigneesPopover();
+      renderTasksTable();
+    }
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") input.blur();
+      if (e.key === "Escape") { input.value = input.dataset.old; input.blur(); }
+    });
+    input.addEventListener("blur", commitRename);
+  });
+  pop.querySelectorAll(".tasks-manage-delete-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const name = btn.dataset.name;
+      assigneesList = assigneesList.filter(n => n !== name);
+      saveAssigneesList();
+      removeAssigneeEverywhere(name);
+      renderManageAssigneesPopover();
+      renderTasksTable();
+    });
+  });
+}
+
+document.getElementById("tasks-manage-assignees-btn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  tasksManageAssigneesOpen = !tasksManageAssigneesOpen;
+  renderManageAssigneesPopover();
+});
+document.addEventListener("click", (e) => {
+  if (!tasksManageAssigneesOpen) return;
+  const pop = document.getElementById("tasks-manage-assignees-popover");
+  const btn = document.getElementById("tasks-manage-assignees-btn");
+  if (pop.contains(e.target) || btn.contains(e.target)) return;
+  tasksManageAssigneesOpen = false;
+  renderManageAssigneesPopover();
+});
+
 let tasksAddingAssigneeId = null; // id of a task currently showing the inline "add new name" input
 let tasksAssigneePickerId = null; // id of a task currently showing the "pick an existing name" dropdown
 let tasksAssigneeExpandedId = null; // id of a task showing all its assignee chips instead of the "Name +N" summary
@@ -2774,9 +2990,12 @@ function renderTaskRow(t, depth) {
   const isSub = depth > 0; // structural: nested under another row (drag/select stay tied to this)
   const isSubtaskType = t.rowType === "subtask"; // explicit classification chosen via the row's Task/Subtask selector
   const rowStyle = isSubtaskType ? ` style="background:${colors.bg}"` : "";
-  const selected = isSub && tasksSelectedIds.has(t.id);
+  const selected = tasksSelectedIds.has(t.id);
   let html = `
     <div class="tasks-row ${selected ? "tasks-row-selected" : ""}" data-id="${t.id}"${rowStyle}>
+      <div class="tasks-col-select">
+        <input type="checkbox" class="tasks-row-checkbox" data-id="${t.id}" ${selected ? "checked" : ""}>
+      </div>
       <div class="tasks-col-name" style="padding-left:${16 + depth * 26}px">
         ${isSub ? `<span class="tasks-drag-handle" data-id="${t.id}" draggable="true" title="Arrastar para mover">⠿</span>` : ""}
         <button class="tasks-toggle ${hasChildren ? "" : "empty"}" data-id="${t.id}" type="button">${expanded ? "▼" : "▶"}</button>
@@ -2837,29 +3056,45 @@ function renderTasksTable() {
       renderTasksTable();
     });
   });
-  // Ctrl/Cmd+click a subtask row to add it to the selection (for dragging
-  // several at once) — clicking without a modifier key just interacts with
-  // whatever field you clicked normally.
+  // Ctrl/Cmd+click any row (or use its checkbox) to add it to the selection
+  // — for bulk delete, and for subtasks also for dragging several at once.
+  // Clicking without a modifier key just interacts with whatever field you
+  // clicked normally.
   body.querySelectorAll(".tasks-row").forEach(row => {
     row.addEventListener("click", (e) => {
+      if (e.target.classList.contains("tasks-row-checkbox")) return; // handled by its own listener
       if (!(e.ctrlKey || e.metaKey)) return;
       const id = row.dataset.id;
-      const container = findTaskContainer(tasksData, id);
-      if (!container || container.array === tasksData) return; // top-level tasks aren't selectable
       e.preventDefault();
       if (tasksSelectedIds.has(id)) tasksSelectedIds.delete(id); else tasksSelectedIds.add(id);
+      renderTasksTable();
+    });
+  });
+  body.querySelectorAll(".tasks-row-checkbox").forEach(cb => {
+    cb.addEventListener("change", () => {
+      const id = cb.dataset.id;
+      if (cb.checked) tasksSelectedIds.add(id); else tasksSelectedIds.delete(id);
       renderTasksTable();
     });
   });
   // Drag-and-drop: grab a subtask by the small handle that appears on
   // hover (like Notion's drag handle) and drop it onto any row — a
   // top-level task or another subtask — to move it there as a child of
-  // whatever you dropped it on. If several rows are Ctrl/Cmd-selected and
-  // you drag one of them, all the selected ones move together.
+  // whatever you dropped it on. If several *subtasks* are Ctrl/Cmd- or
+  // checkbox-selected and you drag one of them, all the selected ones
+  // move together (top-level tasks in the selection are left out of the
+  // drag itself — they're selected only for bulk delete).
   body.querySelectorAll(".tasks-drag-handle").forEach(handle => {
     handle.addEventListener("dragstart", (e) => {
       const id = handle.dataset.id;
-      tasksDragIds = tasksSelectedIds.has(id) && tasksSelectedIds.size > 1 ? [...tasksSelectedIds] : [id];
+      if (tasksSelectedIds.has(id) && tasksSelectedIds.size > 1) {
+        tasksDragIds = [...tasksSelectedIds].filter(sid => {
+          const c = findTaskContainer(tasksData, sid);
+          return c && c.array !== tasksData;
+        });
+      } else {
+        tasksDragIds = [id];
+      }
       e.dataTransfer.effectAllowed = "move";
       e.dataTransfer.setData("text/plain", id);
       const row = handle.closest(".tasks-row");
@@ -3077,7 +3312,46 @@ function renderTasksTable() {
       renderTasksTable();
     });
   });
+  updateTasksBulkBar();
 }
+
+// --- Bulk select / delete bar ---
+let tasksBulkConfirming = false;
+
+function updateTasksBulkBar() {
+  const bar = document.getElementById("tasks-bulk-bar");
+  const count = tasksSelectedIds.size;
+  if (count === 0) {
+    bar.classList.remove("show");
+    tasksBulkConfirming = false;
+    return;
+  }
+  bar.classList.add("show");
+  document.getElementById("tasks-bulk-count").textContent = `${count} selecionada${count > 1 ? "s" : ""}`;
+  document.getElementById("tasks-bulk-actions").classList.toggle("hidden", tasksBulkConfirming);
+  document.getElementById("tasks-bulk-confirm").classList.toggle("hidden", !tasksBulkConfirming);
+}
+
+document.getElementById("tasks-bulk-delete").addEventListener("click", () => {
+  tasksBulkConfirming = true;
+  updateTasksBulkBar();
+});
+document.getElementById("tasks-bulk-confirm-no").addEventListener("click", () => {
+  tasksBulkConfirming = false;
+  updateTasksBulkBar();
+});
+document.getElementById("tasks-bulk-confirm-yes").addEventListener("click", () => {
+  [...tasksSelectedIds].forEach(id => deleteTaskById(tasksData, id));
+  tasksSelectedIds.clear();
+  tasksBulkConfirming = false;
+  saveTasksData();
+  renderTasksTable();
+});
+document.getElementById("tasks-bulk-clear").addEventListener("click", () => {
+  tasksSelectedIds.clear();
+  tasksBulkConfirming = false;
+  renderTasksTable();
+});
 
 document.getElementById("tasks-add-btn").addEventListener("click", () => {
   const newId = "task-" + Date.now();
@@ -3730,7 +4004,7 @@ function renderLegend() {
     return;
   }
 
-  legendTitleEl.textContent = "Status dos países";
+  legendTitleEl.textContent = "Federations";
   const total = allCountries.length;
   legendTotal.textContent = total ? total + " países no total" : "";
 
