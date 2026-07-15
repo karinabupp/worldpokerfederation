@@ -1727,6 +1727,22 @@ const BIN_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
 
 let cloudSyncTimer = null;
 
+// Every edit bumps this counter and it's saved (a) instantly to localStorage
+// and (b) alongside the data in every cloud push. On load we compare it to
+// the cloud's revision: if local is AHEAD (an edit was made but the debounced
+// push never finished — e.g. the page was refreshed right after typing),
+// we keep the local data and re-push it, instead of letting the older cloud
+// snapshot silently overwrite what was just entered. This is what was
+// causing edits (in China's map, in Tasks, anywhere) to disappear on refresh.
+const REVISION_KEY = "wpf_data_revision";
+let localRevision = parseInt(localStorage.getItem(REVISION_KEY) || "0", 10) || 0;
+
+function bumpLocalRevision() {
+  localRevision++;
+  localStorage.setItem(REVISION_KEY, String(localRevision));
+  return localRevision;
+}
+
 function setCloudStatus(state) {
   const el = document.getElementById("cloud-status");
   if (!el) return;
@@ -1743,6 +1759,7 @@ function setCloudStatus(state) {
 
 function collectAllData() {
   return {
+    revision: localRevision,
     federations: countryData,
     committee: committeeCountryData,
     states: stateData,
@@ -1793,8 +1810,21 @@ async function loadFromCloud() {
     });
     if (!res.ok) throw new Error("HTTP " + res.status);
     const data = await res.json();
-    applyAllData(data);
-    setCloudStatus("synced");
+    const cloudRevision = (data && typeof data.revision === "number") ? data.revision : 0;
+    if (localRevision === 0 || cloudRevision >= localRevision) {
+      // Cloud is at least as new as us (or this browser has never made a
+      // local edit) — safe to adopt it.
+      applyAllData(data);
+      localRevision = Math.max(cloudRevision, localRevision);
+      localStorage.setItem(REVISION_KEY, String(localRevision));
+      setCloudStatus("synced");
+    } else {
+      // We have edits the cloud never received (most likely the page was
+      // refreshed right after typing, before the debounced push finished).
+      // Keep the local data as-is and push it up instead of discarding it.
+      setCloudStatus("synced");
+      scheduleCloudSave();
+    }
   } catch (err) {
     console.warn("JSONBin load failed, keeping localStorage data:", err);
     setCloudStatus("error");
@@ -1802,6 +1832,7 @@ async function loadFromCloud() {
 }
 
 function scheduleCloudSave() {
+  bumpLocalRevision();
   setCloudStatus("saving");
   clearTimeout(cloudSyncTimer);
   cloudSyncTimer = setTimeout(async () => {
@@ -4107,6 +4138,43 @@ function wireLegendRowClicks() {
   });
 }
 
+// Same click-to-expand-a-country-list behavior as the Federations/Committee
+// legend above, but generic so it also works for the per-country state
+// pipeline (US/UK/China), the committee version of it, and Brazil's three
+// breakdowns — anywhere a status/pipeline row summarizes a list of regions.
+let stateLegendExpandedKey = null;
+
+function renderExpandableLegendRows(container, rows, total, unitLabel, onSelectName, onReRender) {
+  container.innerHTML = rows.map(r => {
+    const pct = total ? Math.round((r.count / total) * 100) : 0;
+    const dot = r.icon === "star"
+      ? `<svg class="legend-dot" viewBox="0 0 10 10"><rect width="10" height="10" rx="3" fill="${r.color}"/><polygon points="${starPoints(5, 5, 3.3, 1.3)}" fill="#f2b93d" stroke="#7a4f0a" stroke-width="0.4"/></svg>`
+      : `<span class="legend-dot" style="background:${r.color}"></span>`;
+    const isOpen = stateLegendExpandedKey === r.key;
+    return `<div class="legend-row-wrap">
+      <div class="legend-row legend-row-clickable" data-key="${r.key}">
+        <div class="legend-left">${dot}${r.label}</div>
+        <div class="legend-stats"><span class="legend-pct">${pct}%</span><span>${r.count} ${unitLabel}</span></div>
+      </div>
+      ${isOpen ? `<div class="legend-dropdown">${legendDropdownMarkup(r.names)}</div>` : ""}
+    </div>`;
+  }).join("");
+
+  container.querySelectorAll(".legend-row-clickable").forEach(row => {
+    row.addEventListener("click", () => {
+      const key = row.dataset.key;
+      stateLegendExpandedKey = stateLegendExpandedKey === key ? null : key;
+      onReRender();
+    });
+  });
+  container.querySelectorAll(".legend-dropdown-item").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      onSelectName(btn.dataset.name);
+    });
+  });
+}
+
 function renderLegend() {
   if (isCommitteeView()) {
     renderCommitteeLegend();
@@ -4598,21 +4666,33 @@ function renderStateLegend(country, features) {
   stateLegendTotalEl.textContent = total ? total + " estados no total" : "";
 
   const counts = {};
-  STATE_STATUS_OPTIONS.forEach(s => counts[s] = 0);
+  const namesByStatus = {};
+  STATE_STATUS_OPTIONS.forEach(s => { counts[s] = 0; namesByStatus[s] = []; });
   features.forEach(f => {
-    const rec = getStateRecord(country, f.properties.name);
-    if (counts[rec.status] === undefined) counts[rec.status] = 0;
+    const name = f.properties.name;
+    const rec = getStateRecord(country, name);
+    if (counts[rec.status] === undefined) { counts[rec.status] = 0; namesByStatus[rec.status] = []; }
     counts[rec.status]++;
+    namesByStatus[rec.status].push(name);
   });
 
-  stateLegendRowsEl.innerHTML = STATE_STATUS_OPTIONS.map(status => {
-    const count = counts[status];
-    const pct = total ? Math.round((count / total) * 100) : 0;
-    return `<div class="legend-row">
-      <div class="legend-left"><span class="legend-dot" style="background:${STATE_STATUS_COLORS[status]}"></span>${status}</div>
-      <div class="legend-stats"><span class="legend-pct">${pct}%</span><span>${count} estados</span></div>
-    </div>`;
-  }).join("");
+  const rows = STATE_STATUS_OPTIONS.map(status => ({
+    key: status,
+    label: status,
+    color: STATE_STATUS_COLORS[status],
+    count: counts[status],
+    names: namesByStatus[status],
+    icon: null
+  }));
+
+  renderExpandableLegendRows(stateLegendRowsEl, rows, total, "estados", name => {
+    const feature = currentStateFeatures.find(f => f.properties.name === name);
+    if (!feature) return;
+    stateLegendExpandedKey = null;
+    selectState(country, name, feature);
+    zoomToStateFeature(feature);
+    renderStateLegend(country, features);
+  }, () => renderStateLegend(country, features));
 }
 
 function renderCommitteeStateLegend(country, features) {
@@ -4620,45 +4700,50 @@ function renderCommitteeStateLegend(country, features) {
   stateLegendTotalEl.textContent = total ? total + " estados no total" : "";
 
   const counts = {};
-  COMMITTEE_STATUS_OPTIONS.forEach(s => counts[s] = 0);
+  const namesByStatus = {};
+  COMMITTEE_STATUS_OPTIONS.forEach(s => { counts[s] = 0; namesByStatus[s] = []; });
   let starClosedCount = 0;
+  const starClosedNames = [];
   features.forEach(f => {
-    const rec = getCommitteeStateRecord(country, f.properties.name);
-    if (counts[rec.status] === undefined) counts[rec.status] = 0;
+    const name = f.properties.name;
+    const rec = getCommitteeStateRecord(country, name);
+    if (counts[rec.status] === undefined) { counts[rec.status] = 0; namesByStatus[rec.status] = []; }
     counts[rec.status]++;
-    if (isCommitteeStateStarred(country, f.properties.name)) starClosedCount++;
+    namesByStatus[rec.status].push(name);
+    if (isCommitteeStateStarred(country, name)) { starClosedCount++; starClosedNames.push(name); }
   });
 
   const rows = COMMITTEE_STATUS_OPTIONS.map(status => ({
+    key: status,
     label: status,
     color: COMMITTEE_STATUS_COLORS[status].fill,
     count: counts[status],
-    crown: false
+    names: namesByStatus[status],
+    icon: null
   }));
-  rows.push({ label: "Closed with Star", color: COMMITTEE_STATUS_COLORS["Closed"].fill, count: starClosedCount, crown: true });
+  rows.push({ key: "__star_closed__", label: "Closed with Star", color: COMMITTEE_STATUS_COLORS["Closed"].fill, count: starClosedCount, names: starClosedNames, icon: "star" });
 
-  stateLegendRowsEl.innerHTML = rows.map(r => {
-    const pct = total ? Math.round((r.count / total) * 100) : 0;
-    const dot = r.crown
-      ? `<svg class="legend-dot" viewBox="0 0 10 10"><rect width="10" height="10" rx="3" fill="${r.color}"/><polygon points="${starPoints(5, 5, 3.3, 1.3)}" fill="#f2b93d" stroke="#7a4f0a" stroke-width="0.4"/></svg>`
-      : `<span class="legend-dot" style="background:${r.color}"></span>`;
-    return `<div class="legend-row">
-      <div class="legend-left">${dot}${r.label}</div>
-      <div class="legend-stats"><span class="legend-pct">${pct}%</span><span>${r.count} estados</span></div>
-    </div>`;
-  }).join("");
+  renderExpandableLegendRows(stateLegendRowsEl, rows, total, "estados", name => {
+    const feature = currentStateFeatures.find(f => f.properties.name === name);
+    if (!feature) return;
+    stateLegendExpandedKey = null;
+    selectState(country, name, feature);
+    zoomToStateFeature(feature);
+    renderCommitteeStateLegend(country, features);
+  }, () => renderCommitteeStateLegend(country, features));
 }
 
 // --- Brazil "By state" in Federations mode ---
-function renderPercentRows(container, options, colors, counts, total, unitLabel) {
-  container.innerHTML = options.map(opt => {
-    const count = counts[opt] || 0;
-    const pct = total ? Math.round((count / total) * 100) : 0;
-    return `<div class="legend-row">
-      <div class="legend-left"><span class="legend-dot" style="background:${colors[opt]}"></span>${opt}</div>
-      <div class="legend-stats"><span class="legend-pct">${pct}%</span><span>${count} ${unitLabel}</span></div>
-    </div>`;
-  }).join("");
+function renderPercentRows(container, options, colors, counts, total, unitLabel, namesByOption, keyPrefix, onSelectName, onReRender) {
+  const rows = options.map(opt => ({
+    key: keyPrefix + ":" + opt,
+    label: opt,
+    color: colors[opt],
+    count: counts[opt] || 0,
+    names: (namesByOption && namesByOption[opt]) || [],
+    icon: null
+  }));
+  renderExpandableLegendRows(container, rows, total, unitLabel, onSelectName, onReRender);
 }
 
 function renderBrazilLegend(features) {
@@ -4666,20 +4751,34 @@ function renderBrazilLegend(features) {
   brazilLegendTotalEl.textContent = total ? total + " estados no total" : "";
 
   const cnpjCounts = {}, socialCounts = {}, paymentCounts = {};
-  BRAZIL_CNPJ_OPTIONS.forEach(o => cnpjCounts[o] = 0);
-  BRAZIL_SOCIAL_OPTIONS.forEach(o => socialCounts[o] = 0);
-  BRAZIL_PAYMENT_OPTIONS.forEach(o => paymentCounts[o] = 0);
+  const cnpjNames = {}, socialNames = {}, paymentNames = {};
+  BRAZIL_CNPJ_OPTIONS.forEach(o => { cnpjCounts[o] = 0; cnpjNames[o] = []; });
+  BRAZIL_SOCIAL_OPTIONS.forEach(o => { socialCounts[o] = 0; socialNames[o] = []; });
+  BRAZIL_PAYMENT_OPTIONS.forEach(o => { paymentCounts[o] = 0; paymentNames[o] = []; });
 
   features.forEach(f => {
-    const rec = getBrazilStateRecord(f.properties.name);
+    const name = f.properties.name;
+    const rec = getBrazilStateRecord(name);
     cnpjCounts[rec.cnpj] = (cnpjCounts[rec.cnpj] || 0) + 1;
+    (cnpjNames[rec.cnpj] = cnpjNames[rec.cnpj] || []).push(name);
     socialCounts[rec.social] = (socialCounts[rec.social] || 0) + 1;
+    (socialNames[rec.social] = socialNames[rec.social] || []).push(name);
     paymentCounts[rec.payment] = (paymentCounts[rec.payment] || 0) + 1;
+    (paymentNames[rec.payment] = paymentNames[rec.payment] || []).push(name);
   });
 
-  renderPercentRows(brazilCnpjRowsEl, BRAZIL_CNPJ_OPTIONS, BRAZIL_CNPJ_COLORS, cnpjCounts, total, "estados");
-  renderPercentRows(brazilPaymentRowsEl, BRAZIL_PAYMENT_OPTIONS, BRAZIL_PAYMENT_ICON_COLORS, paymentCounts, total, "estados");
-  renderPercentRows(brazilSocialRowsEl, BRAZIL_SOCIAL_OPTIONS, BRAZIL_SOCIAL_ICON_COLORS, socialCounts, total, "estados");
+  const onSelectFactory = () => name => {
+    const feature = currentStateFeatures.find(f => f.properties.name === name);
+    if (!feature) return;
+    stateLegendExpandedKey = null;
+    selectBrazilState(name, feature);
+    zoomToStateFeature(feature);
+    renderBrazilLegend(features);
+  };
+
+  renderPercentRows(brazilCnpjRowsEl, BRAZIL_CNPJ_OPTIONS, BRAZIL_CNPJ_COLORS, cnpjCounts, total, "estados", cnpjNames, "cnpj", onSelectFactory(), () => renderBrazilLegend(features));
+  renderPercentRows(brazilPaymentRowsEl, BRAZIL_PAYMENT_OPTIONS, BRAZIL_PAYMENT_ICON_COLORS, paymentCounts, total, "estados", paymentNames, "payment", onSelectFactory(), () => renderBrazilLegend(features));
+  renderPercentRows(brazilSocialRowsEl, BRAZIL_SOCIAL_OPTIONS, BRAZIL_SOCIAL_ICON_COLORS, socialCounts, total, "estados", socialNames, "social", onSelectFactory(), () => renderBrazilLegend(features));
 }
 
 function selectBrazilState(stateName, feature) {
@@ -4727,7 +4826,7 @@ brazilSocialSelectEl.addEventListener("change", () => {
   refreshBrazilIcons();
 });
 
-brazilSaveBtn.addEventListener("click", () => {
+function saveBrazilFields(showConfirm) {
   if (!activeState) return;
   setBrazilStateRecord(activeState, {
     payment: brazilPaymentSelectEl.value,
@@ -4736,8 +4835,16 @@ brazilSaveBtn.addEventListener("click", () => {
   });
   refreshBrazilStatePaths();
   refreshBrazilIcons();
-  brazilSaveConfirm.classList.add("show");
-  setTimeout(() => brazilSaveConfirm.classList.remove("show"), 1800);
+  if (showConfirm) {
+    brazilSaveConfirm.classList.add("show");
+    setTimeout(() => brazilSaveConfirm.classList.remove("show"), 1800);
+  }
+}
+brazilSaveBtn.addEventListener("click", () => saveBrazilFields(true));
+// These are dropdowns, not free text, so there's no reason to require an
+// extra click — save the moment the person picks a value, same as status.
+[brazilPaymentSelectEl, brazilCnpjSelectEl, brazilSocialSelectEl].forEach(el => {
+  el.addEventListener("change", () => saveBrazilFields(false));
 });
 
 brazilBackBtn.addEventListener("click", () => {
@@ -4798,7 +4905,15 @@ stateStarEl.addEventListener("change", () => {
   fillCurrentStatePaths();
 });
 
-stateSaveBtn.addEventListener("click", () => {
+function debounce(fn, delay) {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), delay);
+  };
+}
+
+function saveStateFields(showConfirm) {
   if (!activeCountry || !activeState) return;
   if (isCommitteeView()) {
     setCommitteeStateRecord(activeCountry, activeState, {
@@ -4815,8 +4930,21 @@ stateSaveBtn.addEventListener("click", () => {
       tournaments: stateTournamentsEl.value.trim()
     });
   }
-  stateSaveConfirm.classList.add("show");
-  setTimeout(() => stateSaveConfirm.classList.remove("show"), 1800);
+  if (showConfirm) {
+    stateSaveConfirm.classList.add("show");
+    setTimeout(() => stateSaveConfirm.classList.remove("show"), 1800);
+  }
+}
+const autoSaveStateFields = debounce(() => saveStateFields(false), 600);
+[statePartnerEl, stateWebsiteEl, stateSocialEl, stateTournamentsEl].forEach(el => {
+  el.addEventListener("input", autoSaveStateFields);
+  // also catch it immediately on blur, in case someone navigates away
+  // before the debounce timer fires
+  el.addEventListener("blur", () => saveStateFields(false));
+});
+
+stateSaveBtn.addEventListener("click", () => {
+  saveStateFields(true);
 });
 
 stateBackBtn.addEventListener("click", () => {
@@ -4837,7 +4965,7 @@ panelStatus.addEventListener("change", () => {
   refreshMapColors();
 });
 
-saveBtn.addEventListener("click", () => {
+function saveCountryFields(showConfirm) {
   if (!activeCountry) return;
   if (isCommitteeView()) {
     setCommitteeRecord(activeCountry, {
@@ -4854,8 +4982,19 @@ saveBtn.addEventListener("click", () => {
       tournaments: panelTournaments.value.trim()
     });
   }
-  saveConfirm.classList.add("show");
-  setTimeout(() => saveConfirm.classList.remove("show"), 1800);
+  if (showConfirm) {
+    saveConfirm.classList.add("show");
+    setTimeout(() => saveConfirm.classList.remove("show"), 1800);
+  }
+}
+const autoSaveCountryFields = debounce(() => saveCountryFields(false), 600);
+[panelWebsite, panelPartner, panelSocial, panelTournaments].forEach(el => {
+  el.addEventListener("input", autoSaveCountryFields);
+  el.addEventListener("blur", () => saveCountryFields(false));
+});
+
+saveBtn.addEventListener("click", () => {
+  saveCountryFields(true);
 });
 
 panelStar.addEventListener("change", () => {
