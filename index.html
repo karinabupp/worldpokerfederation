@@ -1107,6 +1107,57 @@
   }
   .field textarea { resize: vertical; min-height: 72px; line-height: 1.5; }
   .field-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+  #affiliations-rows { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .affiliation-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-size: 13px;
+  }
+  .affiliation-row-name { font-weight: 500; color: var(--text); }
+  .affiliation-row-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 12px;
+    margin-left: 6px;
+    word-break: break-all;
+  }
+  .affiliation-row-link:hover { text-decoration: underline; }
+  .affiliation-remove-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    flex-shrink: 0;
+    padding: 0 2px;
+    line-height: 1;
+  }
+  .affiliation-remove-btn:hover { color: #e24b4a; }
+  .affiliations-empty { font-size: 12px; color: var(--text-muted); padding: 2px 0 6px; }
+  #affiliations-add-row { display: flex; flex-direction: column; gap: 6px; }
+  #affiliations-add-row input {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 13px;
+    background: #ffffff;
+  }
+  #affiliation-add-btn {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  #affiliation-add-btn:hover { border-color: var(--border-strong); }
 
   #checklist {
     display: flex;
@@ -1525,6 +1576,23 @@
           <label class="check-item"><input type="checkbox" id="panel-star"> Star event</label>
         </div>
 
+        <div class="field hidden" id="committee-events-field">
+          <label for="panel-events">Quantos torneios/eventos</label>
+          <input id="panel-events" type="number" min="0" step="1" placeholder="0">
+          <div class="field-hint">Um país pode fechar mais de um evento</div>
+        </div>
+
+        <div class="field hidden" id="committee-affiliations-field">
+          <label>Afiliações</label>
+          <div class="field-hint" style="margin-bottom:8px;">Instituições afiliadas ao comitê neste país</div>
+          <div id="affiliations-rows"></div>
+          <div id="affiliations-add-row">
+            <input type="text" id="affiliation-name-input" placeholder="Nome da instituição">
+            <input type="url" id="affiliation-link-input" placeholder="https://...">
+            <button type="button" id="affiliation-add-btn">Adicionar</button>
+          </div>
+        </div>
+
         <div class="field" id="tournaments-field">
           <label for="panel-tournaments">Principais torneios</label>
           <textarea id="panel-tournaments" placeholder="Nome do torneio 1&#10;Nome do torneio 2"></textarea>
@@ -1857,9 +1925,14 @@ function saveCommitteeData() {
 }
 
 function getCommitteeRecord(name) {
-  const rec = committeeCountryData[name] || { status: "Not Started", partner: "", website: "", social: "", star: false };
+  const rec = committeeCountryData[name] || { status: "Not Started", partner: "", website: "", social: "", star: false, events: 0, affiliations: [] };
   if (rec.partner === undefined) rec.partner = "";
   if (rec.star === undefined) rec.star = false;
+  if (rec.events === undefined) rec.events = 0;
+  // affiliations used to be a plain count before it tracked name+link per
+  // institution — treat anything that isn't already an array as "no data
+  // to recover", since a bare number has no names/links to migrate.
+  if (!Array.isArray(rec.affiliations)) rec.affiliations = [];
   return rec;
 }
 
@@ -4104,8 +4177,10 @@ function selectCountryFromLegend(name) {
 
 function legendDropdownMarkup(names) {
   if (!names.length) return `<div class="legend-dropdown-empty">Nenhum país</div>`;
-  return [...names].sort((a, b) => a.localeCompare(b)).map(name =>
-    `<button type="button" class="legend-dropdown-item" data-name="${name.replace(/"/g, "&quot;")}">${name}</button>`
+  const items = names.map(n => (typeof n === "string" ? { name: n, label: n } : n));
+  items.sort((a, b) => a.name.localeCompare(b.name));
+  return items.map(item =>
+    `<button type="button" class="legend-dropdown-item" data-name="${item.name.replace(/"/g, "&quot;")}">${item.label}</button>`
   ).join("");
 }
 
@@ -4232,38 +4307,65 @@ function renderLegend() {
 }
 
 function renderCommitteeLegend() {
-  legendTitleEl.textContent = "Ladies Weekend";
+  legendTitleEl.textContent = "Women's Committee";
   const total = allCountries.length;
   legendTotal.textContent = total ? total + " países no total" : "";
 
   const counts = {};
   const namesByStatus = {};
   COMMITTEE_STATUS_OPTIONS.forEach(s => { counts[s] = 0; namesByStatus[s] = []; });
-  let starClosedCount = 0;
+  let closedEventsTotal = 0;
+  let starEventsTotal = 0;
   const starClosedNames = [];
+  let affiliationsTotal = 0;
+  const affiliationNames = [];
 
   allCountries.forEach(f => {
     const name = f.properties.name;
     const rec = getCommitteeRecord(name);
     if (counts[rec.status] === undefined) { counts[rec.status] = 0; namesByStatus[rec.status] = []; }
     counts[rec.status]++;
-    namesByStatus[rec.status].push(name);
-    if (isCommitteeStarred(name)) { starClosedCount++; starClosedNames.push(name); }
+    // A closed country may have hosted more than one event (e.g. Japan
+    // closing 2 separate tournaments) — count events, not just countries.
+    // A closed country with no explicit count yet defaults to 1 event.
+    const eventCount = rec.status === "Closed" ? Math.max(1, rec.events || 0) : 0;
+    if (rec.status === "Closed") {
+      closedEventsTotal += eventCount;
+      namesByStatus[rec.status].push(eventCount > 1 ? { name, label: `${name} (${eventCount} eventos)` } : name);
+    } else {
+      namesByStatus[rec.status].push(name);
+    }
+    if (isCommitteeStarred(name)) {
+      starEventsTotal += eventCount;
+      starClosedNames.push(eventCount > 1 ? { name, label: `${name} (${eventCount} eventos)` } : name);
+    }
+    if (rec.affiliations.length > 0) {
+      affiliationsTotal += rec.affiliations.length;
+      affiliationNames.push({ name, label: `${name} (${rec.affiliations.length})` });
+    }
   });
 
   const rows = COMMITTEE_STATUS_OPTIONS.map(status => ({
     key: status,
-    label: status,
+    label: status === "Closed" ? "Closed Events" : status,
     color: COMMITTEE_STATUS_COLORS[status].fill,
-    count: counts[status],
+    count: status === "Closed" ? closedEventsTotal : counts[status],
     names: namesByStatus[status],
     icon: null
   }));
-  rows.push({ key: "__star_closed__", label: "Closed with Star", color: COMMITTEE_STATUS_COLORS["Closed"].fill, count: starClosedCount, names: starClosedNames, icon: "star" });
+  rows.push({ key: "__star_closed__", label: "Star Events", color: COMMITTEE_STATUS_COLORS["Closed"].fill, count: starEventsTotal, names: starClosedNames, icon: "star" });
 
-  legendRows.innerHTML = legendRowsMarkup(rows, total) + `<div class="legend-total-row">
+  const affiliationsRow = `<div class="legend-row-wrap">
+    <div class="legend-row legend-row-clickable" data-key="__affiliations__">
+      <div class="legend-left"><span class="legend-dot" style="background:${COMMITTEE_STATUS_COLORS["Closed"].fill}"></span>Affiliations</div>
+      <div class="legend-stats"><span class="legend-pct">${affiliationsTotal}</span></div>
+    </div>
+    ${legendExpandedKey === "__affiliations__" ? `<div class="legend-dropdown">${legendDropdownMarkup(affiliationNames)}</div>` : ""}
+  </div>`;
+
+  legendRows.innerHTML = legendRowsMarkup(rows, total) + affiliationsRow + `<div class="legend-total-row">
     <span>Total Closed</span>
-    <span class="legend-total-value">${counts["Closed"]}</span>
+    <span class="legend-total-value">${closedEventsTotal}</span>
   </div>`;
   wireLegendRowClicks();
 }
@@ -4286,6 +4388,7 @@ panelTrading.addEventListener("change", () => {
 const panelSocial = document.getElementById("panel-social");
 const panelTournaments = document.getElementById("panel-tournaments");
 const panelStar = document.getElementById("panel-star");
+const panelEvents = document.getElementById("panel-events");
 const saveBtn = document.getElementById("save-btn");
 const saveConfirm = document.getElementById("save-confirm");
 const countEl = document.getElementById("count");
@@ -4371,9 +4474,13 @@ function selectCountry(name, feature) {
   const checklistFieldEl = document.getElementById("checklist-field");
   const tournamentsFieldEl = document.getElementById("tournaments-field");
   const committeeStarFieldEl = document.getElementById("committee-star-field");
+  const committeeEventsFieldEl = document.getElementById("committee-events-field");
+  const committeeAffiliationsFieldEl = document.getElementById("committee-affiliations-field");
   checklistFieldEl.classList.toggle("hidden", committeeMode);
   tournamentsFieldEl.classList.toggle("hidden", committeeMode);
   committeeStarFieldEl.classList.toggle("hidden", !committeeMode);
+  committeeEventsFieldEl.classList.toggle("hidden", !committeeMode);
+  committeeAffiliationsFieldEl.classList.toggle("hidden", !committeeMode);
   document.getElementById("trading-field").classList.toggle("hidden", committeeMode);
   panelTrading.checked = !!rec.trading;
   if (!committeeMode) {
@@ -4383,6 +4490,8 @@ function selectCountry(name, feature) {
     updateChecklistProgress();
   } else {
     panelStar.checked = !!rec.star;
+    panelEvents.value = rec.events || 0;
+    renderAffiliationsList();
   }
   panelWebsite.value = rec.website;
   panelPartner.value = rec.partner || "";
@@ -4981,8 +5090,10 @@ function saveCountryFields(showConfirm) {
       website: panelWebsite.value.trim(),
       partner: panelPartner.value.trim(),
       social: panelSocial.value.trim(),
-      star: panelStar.checked
+      star: panelStar.checked,
+      events: Math.max(0, parseInt(panelEvents.value, 10) || 0)
     });
+    renderLegend();
   } else {
     setRecord(activeCountry, {
       website: panelWebsite.value.trim(),
@@ -4997,9 +5108,67 @@ function saveCountryFields(showConfirm) {
   }
 }
 const autoSaveCountryFields = debounce(() => saveCountryFields(false), 600);
-[panelWebsite, panelPartner, panelSocial, panelTournaments].forEach(el => {
+[panelWebsite, panelPartner, panelSocial, panelTournaments, panelEvents].forEach(el => {
   el.addEventListener("input", autoSaveCountryFields);
   el.addEventListener("blur", () => saveCountryFields(false));
+});
+
+function escapeHtml(s) {
+  return (s || "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+// --- Committee "Afiliações": named institutions with a link, per country ---
+const affiliationsRowsEl = document.getElementById("affiliations-rows");
+const affiliationNameInput = document.getElementById("affiliation-name-input");
+const affiliationLinkInput = document.getElementById("affiliation-link-input");
+const affiliationAddBtn = document.getElementById("affiliation-add-btn");
+
+function renderAffiliationsList() {
+  if (!activeCountry || !isCommitteeView()) { affiliationsRowsEl.innerHTML = ""; return; }
+  const rec = getCommitteeRecord(activeCountry);
+  if (!rec.affiliations.length) {
+    affiliationsRowsEl.innerHTML = `<div class="affiliations-empty">Nenhuma afiliação ainda.</div>`;
+    return;
+  }
+  affiliationsRowsEl.innerHTML = rec.affiliations.map((a, i) => `
+    <div class="affiliation-row">
+      <div>
+        <span class="affiliation-row-name">${escapeHtml(a.name)}</span>
+        ${a.link ? `<a class="affiliation-row-link" href="${escapeHtml(a.link)}" target="_blank" rel="noopener">${escapeHtml(a.link)}</a>` : ""}
+      </div>
+      <button type="button" class="affiliation-remove-btn" data-index="${i}" title="Remover">×</button>
+    </div>
+  `).join("");
+  affiliationsRowsEl.querySelectorAll(".affiliation-remove-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = parseInt(btn.dataset.index, 10);
+      const current = getCommitteeRecord(activeCountry).affiliations.slice();
+      current.splice(idx, 1);
+      setCommitteeRecord(activeCountry, { affiliations: current });
+      renderAffiliationsList();
+      renderLegend();
+    });
+  });
+}
+
+function addAffiliation() {
+  if (!activeCountry) return;
+  const name = affiliationNameInput.value.trim();
+  const link = affiliationLinkInput.value.trim();
+  if (!name) return;
+  const current = getCommitteeRecord(activeCountry).affiliations.slice();
+  current.push({ name, link });
+  setCommitteeRecord(activeCountry, { affiliations: current });
+  affiliationNameInput.value = "";
+  affiliationLinkInput.value = "";
+  renderAffiliationsList();
+  renderLegend();
+}
+affiliationAddBtn.addEventListener("click", addAffiliation);
+[affiliationNameInput, affiliationLinkInput].forEach(el => {
+  el.addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); addAffiliation(); }
+  });
 });
 
 saveBtn.addEventListener("click", () => {
