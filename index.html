@@ -2239,6 +2239,9 @@ Object.keys(NAV_VIEWS).forEach(btnId => {
       // layout), so re-sync the sidebar once it's visible again.
       requestAnimationFrame(syncSidebarHeight);
     }
+    if (btnId === "nav-goals" && typeof fitGoalsGrid === "function") {
+      requestAnimationFrame(fitGoalsGrid);
+    }
   });
 });
 
@@ -2816,6 +2819,35 @@ document.getElementById("overdue-modal-backdrop").addEventListener("click", (e) 
   if (e.target.id === "overdue-modal-backdrop") closeOverdueModal();
 });
 
+// Sizes the grid so every visible card fits on screen at once — few cards
+// means fewer, wider columns; many cards means more, narrower columns —
+// instead of a fixed column width that just wraps into a tall scrolling
+// list. Card height is measured from whatever's already rendered (it's
+// driven mostly by text/padding, not width, so this holds up well even
+// though the column count is about to change).
+function fitGoalsGrid() {
+  const items = goalsGridEl.querySelectorAll(".goals-card");
+  const n = items.length;
+  if (!n) { goalsGridEl.style.gridTemplateColumns = ""; return; }
+  const gap = 14;
+  const minCardWidth = 220;
+  const gridRect = goalsGridEl.getBoundingClientRect();
+  const availableHeight = window.innerHeight - gridRect.top - 20;
+  const containerWidth = goalsGridEl.clientWidth || window.innerWidth;
+  const cardHeight = items[0].offsetHeight || 160;
+  if (availableHeight <= 0 || containerWidth <= 0) return;
+  const maxRows = Math.max(1, Math.floor((availableHeight + gap) / (cardHeight + gap)));
+  const maxColsForWidth = Math.max(1, Math.floor((containerWidth + gap) / (minCardWidth + gap)));
+  const cols = Math.max(1, Math.min(Math.ceil(n / maxRows), maxColsForWidth, n));
+  goalsGridEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+}
+
+let goalsFitResizeTimer = null;
+window.addEventListener("resize", () => {
+  clearTimeout(goalsFitResizeTimer);
+  goalsFitResizeTimer = setTimeout(fitGoalsGrid, 150);
+});
+
 function renderGoalsGrid() {
   clearExpiredPauses();
   renderGoalsLegend();
@@ -2963,6 +2995,7 @@ function renderGoalsGrid() {
       if (typeof renderTasksTable === "function") renderTasksTable();
     });
   });
+  fitGoalsGrid();
 }
 
 document.getElementById("goals-add-btn").addEventListener("click", createNewGoal);
