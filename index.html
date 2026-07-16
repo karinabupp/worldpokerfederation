@@ -756,6 +756,17 @@
     border-radius: 4px;
     vertical-align: middle;
   }
+  .goals-stale-warning {
+    display: block;
+    font-size: 11px;
+    line-height: 1.4;
+    color: #8a5a00;
+    background: #fff4dd;
+    border: 1px solid #f0d99a;
+    padding: 6px 8px;
+    border-radius: 6px;
+    margin: 6px 0;
+  }
   .goals-edit-save {
     background: var(--accent);
     color: #ffffff;
@@ -2383,15 +2394,15 @@ goalsLogoRow.appendChild(logoClone);
 
 const GOALS_NEUTRAL_COLOR = "#9c9a92";
 
-function trendArrowMarkup(pct, prevPct) {
-  if (Math.abs(pct - prevPct) < 0.01) {
+function trendArrowMarkup(val, prevVal) {
+  if (Math.abs(val - prevVal) < 1e-9) {
     // Unchanged since the last entry — flat, neutral arrow.
     return `<svg class="goals-trend-arrow" viewBox="0 0 16 16" fill="none" stroke="${GOALS_NEUTRAL_COLOR}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <line x1="2" y1="8" x2="12" y2="8"/>
       <path d="M12,8 L8,4.5 M12,8 L8,11.5"/>
     </svg>`;
   }
-  const isUp = pct > prevPct;
+  const isUp = val > prevVal;
   const color = isUp ? GOALS_COLORS.green : GOALS_COLORS.red;
   const [x1, y1, x2, y2] = isUp ? [3, 13, 13, 3] : [3, 3, 13, 13];
   const tipX = x2, tipY = y2;
@@ -2466,6 +2477,15 @@ function createNewGoal() {
 // Walks the whole task tree, resolving each task's *effective* KPI link:
 // its own kpiLink if set, otherwise inherited from the nearest ancestor
 // that has one set ("breaking the chain" at any level is allowed).
+function taskHasDescendantForGoal(t, goalId, inheritedKpi) {
+  for (const child of t.subtasks) {
+    const childKpi = child.kpiLink || inheritedKpi;
+    if (childKpi === goalId) return true;
+    if (taskHasDescendantForGoal(child, goalId, childKpi)) return true;
+  }
+  return false;
+}
+
 function overdueTasksWalk(goalId, onMatch) {
   if (typeof tasksData === "undefined" || !goalId) return;
   const today = todayISO();
@@ -2475,7 +2495,14 @@ function overdueTasksWalk(goalId, onMatch) {
   function walk(list, inheritedKpi) {
     list.forEach(t => {
       const effectiveKpi = t.kpiLink || inheritedKpi;
-      if (effectiveKpi === goalId && isOverdue(t)) onMatch(t);
+      // A task counts for this goal either because it's directly linked
+      // (itself or inherited from its parent), OR — for a "container" task
+      // with no KPI of its own (common for top-level tasks that just group
+      // several subtasks under different KPIs) — because it has at least
+      // one descendant linked to this goal. This is what lets an overdue
+      // top-level task show up here, not just its overdue subtasks.
+      const matches = effectiveKpi === goalId || taskHasDescendantForGoal(t, goalId, effectiveKpi);
+      if (matches && isOverdue(t)) onMatch(t);
       walk(t.subtasks, effectiveKpi);
     });
   }
@@ -2518,8 +2545,8 @@ function pauseIconMarkup(paused) {
 function goalsCardViewMarkup(g) {
   const latest = latestEntry(g);
   const prev = prevEntry(g);
-  const pct = entryPct(latest);
-  const prevPct = prev ? entryPct(prev) : pct;
+  const latestVal = parseBRNumber(latest.value);
+  const prevVal = prev ? parseBRNumber(prev.value) : latestVal;
   const paused = isGoalPaused(g);
   const pauseLabel = g.pausedUntil ? `Pausado até ${formatEntryDate(g.pausedUntil)}` : "Pausado";
   const healthColor = GOALS_HEALTH_COLORS[g.health] || GOALS_HEALTH_COLORS["Indo bem"];
@@ -2540,7 +2567,7 @@ function goalsCardViewMarkup(g) {
       <div class="goals-kpi-row">
         <span class="goals-kpi-value">${latest.value}</span>
         <span class="goals-kpi-target">/${latest.target}</span>
-        ${trendArrowMarkup(pct, prevPct)}
+        ${trendArrowMarkup(latestVal, prevVal)}
         ${taskIconMarkup(g)}
       </div>
       <div class="goals-kpi-unit">${latest.unit}</div>
@@ -2559,6 +2586,8 @@ function goalsCardEditMarkup(g) {
   const fallback = nearestPriorEntry(g, goalsEditDate);
   const entry = exact || { date: goalsEditDate, value: fallback?.value ?? "", target: fallback?.target ?? "", unit: fallback?.unit ?? "" };
   const isNew = !exact;
+  const latestOnRecord = latestEntry(g);
+  const isEditingPastLatest = latestOnRecord && goalsEditDate < latestOnRecord.date;
   const canGoForward = goalsEditDate < todayISO();
   const catOptions = Object.keys(GOALS_CAT_COLORS)
     .map(c => `<option value="${c}" ${c === g.cat ? "selected" : ""}>${c}</option>`).join("");
@@ -2587,6 +2616,7 @@ function goalsCardEditMarkup(g) {
         <select id="goals-edit-health" style="color:${healthColor}; font-weight:600;">${healthOptions}</select>
       </div>
       ${isNew ? '<span class="goals-new-badge">nova entrada</span>' : ""}
+      ${isEditingPastLatest ? `<span class="goals-stale-warning">⚠ Isso é anterior ao registro mais recente (${formatEntryDate(latestOnRecord.date)}) — o card e a setinha vão continuar mostrando esse registro, não este que você está editando agora</span>` : ""}
       <div class="goals-edit-field">
         <label>Valor atual</label>
         <input type="text" id="goals-edit-value" value="${entry.value}">
@@ -2622,8 +2652,8 @@ function goalsCardEditMarkup(g) {
   `;
 }
 
-function openOverdueModal(goalId) {
-  if (typeof autoSyncLateStatuses === "function") autoSyncLateStatuses();
+function openOverdueModal(goalId, skipAutoSync) {
+  if (!skipAutoSync && typeof autoSyncLateStatuses === "function") autoSyncLateStatuses();
   const goal = goalsData.find(g => g.id === goalId);
   if (!goal) return;
   const tasks = getOverdueTasksForGoal(goalId);
@@ -2633,7 +2663,7 @@ function openOverdueModal(goalId) {
     ? tasks.map(t => {
         const parentName = findParentTaskName(t.id);
         return `
-        <div class="overdue-task-item">
+        <div class="overdue-task-item" data-item-id="${t.id}">
           ${parentName ? `<div class="overdue-task-parent">↳ ${parentName}</div>` : ""}
           <span class="overdue-task-name">${t.name}</span>
           <div class="overdue-task-row">
@@ -2653,7 +2683,16 @@ function openOverdueModal(goalId) {
       saveTasksData();
       if (typeof renderTasksTable === "function") renderTasksTable();
       renderGoalsGrid(); // updates the task icon/color right away
-      openOverdueModal(select.dataset.goalId); // refresh the list (task may no longer be overdue)
+      // Take the item out of this list right away, whatever status was
+      // picked — this is a quick-triage list, not a strict live filter, so
+      // once you've acted on something it shouldn't linger here. We also
+      // skip auto-sync on this refresh, since re-running it here was
+      // immediately flipping the status you just picked back to "Late".
+      const itemEl = bodyEl.querySelector(`.overdue-task-item[data-item-id="${t.id}"]`);
+      if (itemEl) itemEl.remove();
+      if (!bodyEl.querySelector(".overdue-task-item")) {
+        bodyEl.innerHTML = `<div class="overdue-task-empty">Nenhuma task em atraso.</div>`;
+      }
     });
   });
   document.getElementById("overdue-modal-backdrop").classList.remove("hidden");
@@ -3037,7 +3076,11 @@ function autoSyncLateStatuses() {
   let changed = false;
   function walk(items) {
     items.forEach(t => {
-      if (t.status !== "Done" && t.status !== "Cancelled" && t.endDate && t.endDate < today && t.status !== "Late") {
+      // Only auto-flip tasks nobody has touched yet (still at the default
+      // "Not Started") once their due date passes. Once a person picks any
+      // status themselves — In Progress, On Hold, Late, whatever — that's
+      // a deliberate choice and this sync must never silently overwrite it.
+      if (t.status === "Not Started" && t.endDate && t.endDate < today) {
         t.status = "Late";
         changed = true;
       }
