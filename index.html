@@ -631,6 +631,22 @@
     border-radius: 12px;
     overflow: hidden;
   }
+  .goals-card-dragging { opacity: 0.4; }
+  .goals-card-drop-before { box-shadow: inset 3px 0 0 var(--accent); }
+  .goals-card-drop-after { box-shadow: inset -3px 0 0 var(--accent); }
+  .goals-drag-handle {
+    flex-shrink: 0;
+    cursor: grab;
+    color: var(--text-muted);
+    opacity: 0;
+    font-size: 14px;
+    line-height: 1;
+    user-select: none;
+    margin-right: 2px;
+  }
+  .goals-card:hover .goals-drag-handle { opacity: 0.55; }
+  .goals-drag-handle:hover { opacity: 1 !important; }
+  .goals-drag-handle:active { cursor: grabbing; }
   .goals-card-top { height: 5px; width: 100%; }
   .goals-card-body { padding: 20px 20px 22px; }
   .goals-card-topline { display: flex; align-items: center; justify-content: space-between; }
@@ -2435,6 +2451,22 @@ const goalsGridEl = document.getElementById("goals-grid");
 let goalsActiveCat = "Geral";
 let goalsEditingId = null;
 let goalsConfirmDeleteId = null; // id of a goal currently showing the inline "are you sure?" delete confirmation
+let goalsDragId = null; // id of the goal card currently being dragged, for reordering
+
+// Moves the dragged goal to just before/after the target goal within the
+// full goalsData array — even when a category filter is active and only
+// some cards are visible, so the other (hidden) cards keep their relative
+// order untouched.
+function reorderGoal(draggedId, targetId, placeAfter) {
+  const draggedIdx = goalsData.findIndex(g => g.id === draggedId);
+  if (draggedIdx === -1) return;
+  const [draggedGoal] = goalsData.splice(draggedIdx, 1);
+  let targetIdx = goalsData.findIndex(g => g.id === targetId);
+  if (targetIdx === -1) { goalsData.push(draggedGoal); return; }
+  if (placeAfter) targetIdx++;
+  goalsData.splice(targetIdx, 0, draggedGoal);
+}
+
 
 // Cloning the existing logo node avoids duplicating its large base64 source.
 const goalsLogoRow = document.getElementById("goals-logo-row");
@@ -2610,6 +2642,7 @@ function goalsCardViewMarkup(g) {
     <div class="goals-card-body">
       <div class="goals-card-topline">
         <div class="goals-card-cat-group">
+          <span class="goals-drag-handle" data-id="${g.id}" draggable="true" title="Arrastar para reordenar">⠿</span>
           <span class="goals-card-cat">${g.cat}</span>
           <span class="goals-health-badge" style="color:${healthColor}">● ${g.health}</span>
         </div>
@@ -2801,11 +2834,54 @@ function renderGoalsGrid() {
 
   const items = goalsActiveCat === "Geral" ? goalsData : goalsData.filter(g => g.cat === goalsActiveCat);
   goalsGridEl.innerHTML = items.map(g => `
-    <div class="goals-card ${isGoalPaused(g) && g.id !== goalsEditingId ? "paused" : ""}">
+    <div class="goals-card ${isGoalPaused(g) && g.id !== goalsEditingId ? "paused" : ""}" data-id="${g.id}">
       ${g.id === goalsEditingId ? goalsCardEditMarkup(g) : goalsCardViewMarkup(g)}
     </div>
   `).join("");
 
+  goalsGridEl.querySelectorAll(".goals-drag-handle").forEach(handle => {
+    handle.addEventListener("dragstart", (e) => {
+      goalsDragId = handle.dataset.id;
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", goalsDragId);
+      const card = handle.closest(".goals-card");
+      if (card) {
+        e.dataTransfer.setDragImage(card, 20, 20);
+        card.classList.add("goals-card-dragging");
+      }
+    });
+    handle.addEventListener("dragend", () => {
+      goalsDragId = null;
+      goalsGridEl.querySelectorAll(".goals-card-dragging").forEach(c => c.classList.remove("goals-card-dragging"));
+      goalsGridEl.querySelectorAll(".goals-card-drop-before, .goals-card-drop-after").forEach(c => c.classList.remove("goals-card-drop-before", "goals-card-drop-after"));
+    });
+  });
+  goalsGridEl.querySelectorAll(".goals-card").forEach(card => {
+    card.addEventListener("dragover", (e) => {
+      if (!goalsDragId || card.dataset.id === goalsDragId) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      const rect = card.getBoundingClientRect();
+      const before = e.clientX < rect.left + rect.width / 2;
+      card.classList.toggle("goals-card-drop-before", before);
+      card.classList.toggle("goals-card-drop-after", !before);
+    });
+    card.addEventListener("dragleave", () => {
+      card.classList.remove("goals-card-drop-before", "goals-card-drop-after");
+    });
+    card.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const targetId = card.dataset.id;
+      card.classList.remove("goals-card-drop-before", "goals-card-drop-after");
+      if (!goalsDragId || goalsDragId === targetId) return;
+      const rect = card.getBoundingClientRect();
+      const placeAfter = e.clientX >= rect.left + rect.width / 2;
+      reorderGoal(goalsDragId, targetId, placeAfter);
+      goalsDragId = null;
+      saveGoalsData();
+      renderGoalsGrid();
+    });
+  });
   goalsGridEl.querySelectorAll(".goals-task-icon-btn").forEach(btn => {
     btn.addEventListener("click", () => openOverdueModal(btn.dataset.goalId));
   });
