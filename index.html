@@ -623,6 +623,7 @@
   #goals-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+    align-items: start;
     gap: 14px;
   }
   .goals-card {
@@ -631,6 +632,7 @@
     border-radius: 12px;
     overflow: hidden;
   }
+  .goals-card-editing { grid-column: span 3; }
   .goals-card[draggable="true"] { cursor: grab; }
   .goals-card[draggable="true"]:active { cursor: grabbing; }
   .goals-card-dragging { opacity: 0.4; }
@@ -729,10 +731,15 @@
     font-family: inherit;
   }
   .goals-edit-actions { display: flex; gap: 8px; margin-top: 6px; }
+  .goals-entries-table-wrap {
+    overflow-x: auto;
+    margin-top: 6px;
+    border-radius: 6px;
+  }
   .goals-entries-table {
     width: 100%;
+    min-width: 420px;
     border-collapse: collapse;
-    margin-top: 6px;
     font-size: 12.5px;
   }
   .goals-entries-table th {
@@ -2754,14 +2761,16 @@ function goalsCardEditMarkup(g) {
       </div>
       <div class="goals-edit-field">
         <label>Histórico mensal</label>
-        <table class="goals-entries-table">
-          <thead><tr><th>Mês</th><th>Unidade</th><th>Meta</th><th>Atingido</th><th></th></tr></thead>
-          <tbody id="goals-entries-tbody">${
-            goalsEditRows.length
-              ? goalsEditRows.map(goalsEditRowMarkup).join("")
-              : `<tr><td colspan="5" class="goals-entries-empty">Nenhum mês ainda — clique em "+ Adicionar mês".</td></tr>`
-          }</tbody>
-        </table>
+        <div class="goals-entries-table-wrap">
+          <table class="goals-entries-table">
+            <thead><tr><th>Mês</th><th>Unidade</th><th>Meta</th><th>Atingido</th><th></th></tr></thead>
+            <tbody id="goals-entries-tbody">${
+              goalsEditRows.length
+                ? goalsEditRows.map(goalsEditRowMarkup).join("")
+                : `<tr><td colspan="5" class="goals-entries-empty">Nenhum mês ainda — clique em "+ Adicionar mês".</td></tr>`
+            }</tbody>
+          </table>
+        </div>
         <button type="button" class="goals-add-month-btn" id="goals-add-month-btn">+ Adicionar mês</button>
       </div>
       ${goalsConfirmDeleteId === g.id ? `
@@ -2873,7 +2882,8 @@ function fitGoalsGrid() {
   const gridRect = goalsGridEl.getBoundingClientRect();
   const availableHeight = window.innerHeight - gridRect.top - 20;
   const containerWidth = goalsGridEl.clientWidth || window.innerWidth;
-  const cardHeight = items[0].offsetHeight || 160;
+  const sampleCard = goalsGridEl.querySelector(".goals-card:not(.goals-card-editing)") || items[0];
+  const cardHeight = sampleCard.offsetHeight || 160;
   if (availableHeight <= 0 || containerWidth <= 0) return;
   const maxRows = Math.max(1, Math.floor((availableHeight + gap) / (cardHeight + gap)));
   const maxColsForWidth = Math.max(1, Math.floor((containerWidth + gap) / (minCardWidth + gap)));
@@ -2893,7 +2903,7 @@ function renderGoalsGrid() {
 
   const items = goalsActiveCat === "Geral" ? goalsData : goalsData.filter(g => g.cat === goalsActiveCat);
   goalsGridEl.innerHTML = items.map(g => `
-    <div class="goals-card ${isGoalPaused(g) && g.id !== goalsEditingId ? "paused" : ""}" data-id="${g.id}" ${g.id === goalsEditingId ? "" : 'draggable="true"'}>
+    <div class="goals-card ${isGoalPaused(g) && g.id !== goalsEditingId ? "paused" : ""} ${g.id === goalsEditingId ? "goals-card-editing" : ""}" data-id="${g.id}" ${g.id === goalsEditingId ? "" : 'draggable="true"'}>
       ${g.id === goalsEditingId ? goalsCardEditMarkup(g) : goalsCardViewMarkup(g)}
     </div>
   `).join("");
