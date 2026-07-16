@@ -685,6 +685,9 @@
   .goals-card-name { font-size: 18px; font-weight: 600; margin: 8px 0 22px; }
   .goals-kpi-row { display: flex; align-items: baseline; gap: 6px; }
   .goals-trend-arrow { width: 17px; height: 17px; margin-left: 3px; }
+  .goals-trend-wrap { display: inline-flex; align-items: center; gap: 2px; margin-left: 3px; }
+  .goals-trend-wrap .goals-trend-arrow { margin-left: 0; }
+  .goals-trend-delta { font-size: 10.5px; font-weight: 700; white-space: nowrap; }
   .goals-task-icon-btn {
     background: transparent;
     border: none;
@@ -2483,9 +2486,9 @@ goalsLogoRow.appendChild(logoClone);
 
 const GOALS_NEUTRAL_COLOR = "#9c9a92";
 
-function trendArrowMarkup(val, prevVal) {
+function trendArrowMarkup(val, prevVal, g) {
   if (Math.abs(val - prevVal) < 1e-9) {
-    // Unchanged since the last entry — flat, neutral arrow.
+    // Unchanged since the last entry — flat, neutral arrow, no delta needed.
     return `<svg class="goals-trend-arrow" viewBox="0 0 16 16" fill="none" stroke="${GOALS_NEUTRAL_COLOR}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <line x1="2" y1="8" x2="12" y2="8"/>
       <path d="M12,8 L8,4.5 M12,8 L8,11.5"/>
@@ -2498,10 +2501,14 @@ function trendArrowMarkup(val, prevVal) {
   const headPath = isUp
     ? `M${tipX},${tipY} L${tipX - 5.5},${tipY} M${tipX},${tipY} L${tipX},${tipY + 5.5}`
     : `M${tipX},${tipY} L${tipX - 5.5},${tipY} M${tipX},${tipY} L${tipX},${tipY - 5.5}`;
-  return `<svg class="goals-trend-arrow" viewBox="0 0 16 16" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>
-    <path d="${headPath}"/>
-  </svg>`;
+  const deltaText = `${isUp ? "+" : "-"}${formatBRNumber(Math.abs(val - prevVal), g)}`;
+  return `<span class="goals-trend-wrap">
+    <svg class="goals-trend-arrow" viewBox="0 0 16 16" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>
+      <path d="${headPath}"/>
+    </svg>
+    <span class="goals-trend-delta" style="color:${color}">${deltaText}</span>
+  </span>`;
 }
 
 function renderGoalsTabCounts() {
@@ -2658,7 +2665,7 @@ function goalsCardViewMarkup(g) {
       <div class="goals-kpi-row">
         <span class="goals-kpi-value">${displayedValue}</span>
         <span class="goals-kpi-target">/${latest.target}</span>
-        ${trendArrowMarkup(latestVal, prevVal)}
+        ${trendArrowMarkup(latestVal, prevVal, g)}
         ${taskIconMarkup(g)}
       </div>
       <div class="goals-kpi-unit">${latest.unit}</div>
