@@ -2341,6 +2341,39 @@ function parseBRNumber(str) {
   return isNaN(n) ? 0 : n;
 }
 
+// Inverse of parseBRNumber, for numbers we compute ourselves (like a
+// cumulative sum) rather than text someone typed — "." every 3 digits,
+// "," for a decimal part, matching how every other value is displayed.
+// Looks at what's actually been typed for this KPI (target/value text) to
+// figure out whether "." or "," is being used as the thousands separator
+// — so a computed cumulative total matches whatever style the person is
+// already using in that card, instead of always forcing one convention.
+function detectNumberStyle(g) {
+  const samples = [];
+  (g.entries || []).forEach(e => { samples.push(e.target, e.value); });
+  for (const s of samples) {
+    const str = String(s || "");
+    // "," used as a thousands grouping (e.g. "11,234") — comma style.
+    if (/,\d{3}(\D|$)/.test(str)) return { thousands: ",", decimal: "." };
+    // "." used as a thousands grouping (e.g. "11.234") — the Brazilian
+    // default already used everywhere else in the app.
+    if (/\.\d{3}(\D|$)/.test(str)) return { thousands: ".", decimal: "," };
+    // A lone "," with 1-2 trailing digits is a decimal, not thousands
+    // (e.g. "4,95") — still signals comma-as-decimal (dot-thousands) style.
+    if (/,\d{1,2}$/.test(str)) return { thousands: ".", decimal: "," };
+  }
+  return { thousands: ".", decimal: "," };
+}
+
+function formatBRNumber(n, g) {
+  const style = g ? detectNumberStyle(g) : { thousands: ".", decimal: "," };
+  const rounded = Math.round(n * 100) / 100;
+  const isInt = Number.isInteger(rounded);
+  const [intPart, decPart] = rounded.toFixed(isInt ? 0 : 2).split(".");
+  const withThousands = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, style.thousands);
+  return isInt ? withThousands : `${withThousands}${style.decimal}${decPart}`;
+}
+
 function sortedEntries(g) {
   return [...g.entries].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 }
@@ -2568,7 +2601,7 @@ function goalsCardViewMarkup(g) {
   const prev = prevEntry(g);
   const latestVal = displayedValueThrough(g, latest);
   const prevVal = prev ? displayedValueThrough(g, prev) : latestVal;
-  const displayedValue = g.cumulative ? String(latestVal) : latest.value;
+  const displayedValue = g.cumulative ? formatBRNumber(latestVal, g) : latest.value;
   const paused = isGoalPaused(g);
   const pauseLabel = g.pausedUntil ? `Pausado até ${formatEntryDate(g.pausedUntil)}` : "Pausado";
   const healthColor = GOALS_HEALTH_COLORS[g.health] || GOALS_HEALTH_COLORS["Indo bem"];
