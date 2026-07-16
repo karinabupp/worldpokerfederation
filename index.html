@@ -721,52 +721,57 @@
     font-family: inherit;
   }
   .goals-edit-actions { display: flex; gap: 8px; margin-top: 6px; }
-  .goals-edit-nav { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 12px; }
-  .goals-nav-arrow {
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    width: 26px;
-    height: 26px;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-size: 13px;
-    line-height: 1;
-    flex-shrink: 0;
-  }
-  .goals-nav-arrow:hover:not(:disabled) { background: var(--land-default); color: var(--text); }
-  .goals-nav-arrow:disabled { opacity: 0.3; cursor: default; }
-  #goals-edit-date {
-    border: none;
-    background: transparent;
-    color: var(--text-muted);
+  .goals-entries-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 6px;
     font-size: 12.5px;
-    font-weight: 500;
-    text-align: center;
-    flex: 1;
   }
-  .goals-new-badge {
-    font-size: 9.5px;
-    font-weight: 700;
+  .goals-entries-table th {
+    text-align: left;
+    font-size: 10.5px;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-    color: var(--accent);
-    background: rgba(37,99,235,0.1);
-    padding: 2px 6px;
-    border-radius: 4px;
-    vertical-align: middle;
+    color: var(--text-muted);
+    font-weight: 600;
+    padding: 4px 4px;
+    border-bottom: 1px solid var(--border);
   }
-  .goals-stale-warning {
-    display: block;
-    font-size: 11px;
-    line-height: 1.4;
-    color: #8a5a00;
-    background: #fff4dd;
-    border: 1px solid #f0d99a;
-    padding: 6px 8px;
+  .goals-entries-table td { padding: 3px 4px 3px 0; vertical-align: middle; }
+  .goals-entries-table .goals-cell {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 5px 6px;
+    font-size: 12.5px;
+    font-family: inherit;
+    color: var(--text);
+    background: #ffffff;
+  }
+  .goals-entries-table .goals-cell-month { min-width: 118px; }
+  .goals-row-delete {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 4px;
+  }
+  .goals-row-delete:hover { color: #e24b4a; }
+  .goals-entries-empty { color: var(--text-muted); font-size: 12px; text-align: center; padding: 10px 0; }
+  .goals-add-month-btn {
+    margin-top: 8px;
+    border: 1px dashed var(--border-strong);
+    background: transparent;
+    color: var(--text-muted);
     border-radius: 6px;
-    margin: 6px 0;
+    padding: 6px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    width: 100%;
   }
+  .goals-add-month-btn:hover { background: var(--land-default); color: var(--text); }
   .goals-edit-save {
     background: var(--accent);
     color: #ffffff;
@@ -2298,6 +2303,10 @@ function migrateGoalRecord(g) {
   if (out.paused === undefined) out.paused = false;
   if (out.pausedUntil === undefined) out.pausedUntil = null;
   if (out.health === undefined) out.health = "Indo bem";
+  // Cumulative goals sum every month's own entry up to the latest one
+  // (e.g. "members added" tracked monthly but shown as a running total).
+  // Defaults to false so nothing existing changes how it displays.
+  if (out.cumulative === undefined) out.cumulative = false;
   return out;
 }
 
@@ -2353,6 +2362,18 @@ function prevEntry(g) {
   return entries.length > 1 ? entries[entries.length - 2] : null;
 }
 
+// For non-cumulative goals this is just that entry's own value (unchanged
+// from before). For cumulative goals it's the running total of every
+// month's value up to and including this one — e.g. monthly new-members
+// entries of 5, 3, 8 show as 5, 8, 16 on the card.
+function displayedValueThrough(g, entry) {
+  const raw = parseBRNumber(entry.value);
+  if (!g.cumulative) return raw;
+  return sortedEntries(g)
+    .filter(e => e.date <= entry.date)
+    .reduce((sum, e) => sum + parseBRNumber(e.value), 0);
+}
+
 function formatEntryDate(dateStr) {
   if (!dateStr) return "";
   const [y, m, d] = dateStr.split("-");
@@ -2380,7 +2401,6 @@ function nearestPriorEntry(g, dateStr) {
 const goalsGridEl = document.getElementById("goals-grid");
 let goalsActiveCat = "Geral";
 let goalsEditingId = null;
-let goalsEditDate = null; // ISO date of the entry currently shown in the edit form
 let goalsConfirmDeleteId = null; // id of a goal currently showing the inline "are you sure?" delete confirmation
 
 // Cloning the existing logo node avoids duplicating its large base64 source.
@@ -2461,12 +2481,13 @@ function createNewGoal() {
     entries: [{ date: todayISO(), value: "0", target: "1", unit: "" }],
     paused: false,
     pausedUntil: null,
-    health: "Indo bem"
+    health: "Indo bem",
+    cumulative: false
   });
   saveGoalsData();
   goalsActiveCat = "Geral";
   goalsEditingId = id;
-  goalsEditDate = todayISO();
+  goalsEditRows = null;
   renderGoalsTabCounts();
   renderGoalsGrid();
   if (typeof renderTasksTable === "function") renderTasksTable();
@@ -2545,8 +2566,9 @@ function pauseIconMarkup(paused) {
 function goalsCardViewMarkup(g) {
   const latest = latestEntry(g);
   const prev = prevEntry(g);
-  const latestVal = parseBRNumber(latest.value);
-  const prevVal = prev ? parseBRNumber(prev.value) : latestVal;
+  const latestVal = displayedValueThrough(g, latest);
+  const prevVal = prev ? displayedValueThrough(g, prev) : latestVal;
+  const displayedValue = g.cumulative ? String(latestVal) : latest.value;
   const paused = isGoalPaused(g);
   const pauseLabel = g.pausedUntil ? `Pausado até ${formatEntryDate(g.pausedUntil)}` : "Pausado";
   const healthColor = GOALS_HEALTH_COLORS[g.health] || GOALS_HEALTH_COLORS["Indo bem"];
@@ -2565,7 +2587,7 @@ function goalsCardViewMarkup(g) {
       </div>
       <div class="goals-card-name">${g.name}</div>
       <div class="goals-kpi-row">
-        <span class="goals-kpi-value">${latest.value}</span>
+        <span class="goals-kpi-value">${displayedValue}</span>
         <span class="goals-kpi-target">/${latest.target}</span>
         ${trendArrowMarkup(latestVal, prevVal)}
         ${taskIconMarkup(g)}
@@ -2578,17 +2600,53 @@ function goalsCardViewMarkup(g) {
   `;
 }
 
-// goalsEditDate is the ISO date currently shown in the edit form. If no
-// entry exists for that exact date, the form shows a "new" entry prefilled
-// from the nearest earlier entry (a convenient starting point to edit from).
+// goalsEditRows holds the spreadsheet rows (one per month) for whichever
+// goal is currently being edited. It's kept in sync with the table's
+// inputs as the person types, so add/remove-month can re-render just the
+// table body without losing anything typed in other rows.
+let goalsEditRows = null;
+
+function goalsEditRowMarkup(row, i) {
+  return `
+    <tr data-row-index="${i}">
+      <td><input type="month" class="goals-cell goals-cell-month" data-field="date" data-row-index="${i}" value="${(row.date || "").slice(0, 7)}"></td>
+      <td><input type="text" class="goals-cell" data-field="unit" data-row-index="${i}" value="${row.unit || ""}" placeholder="ex: Federations"></td>
+      <td><input type="text" class="goals-cell" data-field="target" data-row-index="${i}" value="${row.target || ""}"></td>
+      <td><input type="text" class="goals-cell" data-field="value" data-row-index="${i}" value="${row.value || ""}"></td>
+      <td><button type="button" class="goals-row-delete" data-row-index="${i}" title="Remover mês">🗑</button></td>
+    </tr>
+  `;
+}
+
+function wireGoalsEditRowsTable() {
+  const tbody = document.getElementById("goals-entries-tbody");
+  if (!tbody) return;
+  tbody.innerHTML = goalsEditRows.length
+    ? goalsEditRows.map(goalsEditRowMarkup).join("")
+    : `<tr><td colspan="5" class="goals-entries-empty">Nenhum mês ainda — clique em "+ Adicionar mês".</td></tr>`;
+  tbody.querySelectorAll(".goals-cell").forEach(input => {
+    input.addEventListener("input", () => {
+      const i = parseInt(input.dataset.rowIndex, 10);
+      const field = input.dataset.field;
+      if (field === "date") {
+        if (input.value) goalsEditRows[i].date = input.value + "-01";
+      } else {
+        goalsEditRows[i][field] = input.value;
+      }
+    });
+  });
+  tbody.querySelectorAll(".goals-row-delete").forEach(btn => {
+    btn.addEventListener("click", () => {
+      goalsEditRows.splice(parseInt(btn.dataset.rowIndex, 10), 1);
+      wireGoalsEditRowsTable();
+    });
+  });
+}
+
 function goalsCardEditMarkup(g) {
-  const exact = entryForDate(g, goalsEditDate);
-  const fallback = nearestPriorEntry(g, goalsEditDate);
-  const entry = exact || { date: goalsEditDate, value: fallback?.value ?? "", target: fallback?.target ?? "", unit: fallback?.unit ?? "" };
-  const isNew = !exact;
-  const latestOnRecord = latestEntry(g);
-  const isEditingPastLatest = latestOnRecord && goalsEditDate < latestOnRecord.date;
-  const canGoForward = goalsEditDate < todayISO();
+  if (!goalsEditRows) {
+    goalsEditRows = sortedEntries(g).slice().reverse().map(e => ({ ...e }));
+  }
   const catOptions = Object.keys(GOALS_CAT_COLORS)
     .map(c => `<option value="${c}" ${c === g.cat ? "selected" : ""}>${c}</option>`).join("");
   const healthOptions = GOALS_HEALTH_OPTIONS
@@ -2598,11 +2656,6 @@ function goalsCardEditMarkup(g) {
   return `
     <div class="goals-card-top" style="background:${healthColor}"></div>
     <div class="goals-card-body">
-      <div class="goals-edit-nav">
-        <button class="goals-nav-arrow" id="goals-nav-prev" type="button" title="Semana anterior">←</button>
-        <input type="date" id="goals-edit-date" value="${goalsEditDate}" max="${todayISO()}">
-        <button class="goals-nav-arrow" id="goals-nav-next" type="button" ${canGoForward ? "" : "disabled"} title="Próxima semana">→</button>
-      </div>
       <div class="goals-edit-field">
         <label>Nome do KPI</label>
         <input type="text" id="goals-edit-name" value="${g.name}">
@@ -2615,23 +2668,25 @@ function goalsCardEditMarkup(g) {
         <label>Status do KPI</label>
         <select id="goals-edit-health" style="color:${healthColor}; font-weight:600;">${healthOptions}</select>
       </div>
-      ${isNew ? '<span class="goals-new-badge">nova entrada</span>' : ""}
-      ${isEditingPastLatest ? `<span class="goals-stale-warning">⚠ Isso é anterior ao registro mais recente (${formatEntryDate(latestOnRecord.date)}) — o card e a setinha vão continuar mostrando esse registro, não este que você está editando agora</span>` : ""}
       <div class="goals-edit-field">
-        <label>Valor atual</label>
-        <input type="text" id="goals-edit-value" value="${entry.value}">
-      </div>
-      <div class="goals-edit-field">
-        <label>Meta</label>
-        <input type="text" id="goals-edit-target" value="${entry.target}">
-      </div>
-      <div class="goals-edit-field">
-        <label>Tipo de meta</label>
-        <input type="text" id="goals-edit-unit" value="${entry.unit}">
+        <label class="check-item"><input type="checkbox" id="goals-edit-cumulative" ${g.cumulative ? "checked" : ""}> Meta acumulativa (soma os meses)</label>
+        <div class="field-hint">Desligado: o card mostra o resultado do mês. Ligado: o card mostra a soma de todos os meses até agora.</div>
       </div>
       <div class="goals-edit-field">
         <label>Pausar até (opcional)</label>
         <input type="date" id="goals-edit-pause-until" value="${g.pausedUntil || ""}">
+      </div>
+      <div class="goals-edit-field">
+        <label>Histórico mensal</label>
+        <table class="goals-entries-table">
+          <thead><tr><th>Mês</th><th>Unidade</th><th>Meta</th><th>Atingido</th><th></th></tr></thead>
+          <tbody id="goals-entries-tbody">${
+            goalsEditRows.length
+              ? goalsEditRows.map(goalsEditRowMarkup).join("")
+              : `<tr><td colspan="5" class="goals-entries-empty">Nenhum mês ainda — clique em "+ Adicionar mês".</td></tr>`
+          }</tbody>
+        </table>
+        <button type="button" class="goals-add-month-btn" id="goals-add-month-btn">+ Adicionar mês</button>
       </div>
       ${goalsConfirmDeleteId === g.id ? `
       <div class="goals-delete-confirm">
@@ -2724,7 +2779,7 @@ function renderGoalsGrid() {
   goalsGridEl.querySelectorAll(".goals-edit-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       goalsEditingId = btn.dataset.id;
-      goalsEditDate = todayISO(); // open on today by default
+      goalsEditRows = null; // re-seed fresh from this goal's entries
       goalsConfirmDeleteId = null;
       renderGoalsGrid();
     });
@@ -2732,26 +2787,21 @@ function renderGoalsGrid() {
   goalsGridEl.querySelectorAll(".goals-edit-cancel").forEach(btn => {
     btn.addEventListener("click", () => {
       goalsEditingId = null;
+      goalsEditRows = null;
       goalsConfirmDeleteId = null;
       renderGoalsGrid();
     });
   });
-  const navPrev = document.getElementById("goals-nav-prev");
-  const navNext = document.getElementById("goals-nav-next");
-  const dateInput = document.getElementById("goals-edit-date");
-  if (navPrev) navPrev.addEventListener("click", () => {
-    goalsEditDate = addDaysISO(goalsEditDate, -7); // always enabled — goes back indefinitely
-    renderGoalsGrid();
-  });
-  if (navNext) navNext.addEventListener("click", () => {
-    const next = addDaysISO(goalsEditDate, 7);
-    goalsEditDate = next > todayISO() ? todayISO() : next;
-    renderGoalsGrid();
-  });
-  if (dateInput) dateInput.addEventListener("change", () => {
-    goalsEditDate = dateInput.value || todayISO();
-    renderGoalsGrid();
-  });
+  if (goalsEditingId) {
+    wireGoalsEditRowsTable();
+    const addMonthBtn = document.getElementById("goals-add-month-btn");
+    if (addMonthBtn) addMonthBtn.addEventListener("click", () => {
+      const last = goalsEditRows[0]; // most-recent-first order
+      const nextMonth = last ? addDaysISO(last.date.slice(0, 7) + "-01", 32).slice(0, 7) : todayISO().slice(0, 7);
+      goalsEditRows.unshift({ date: nextMonth + "-01", value: "", target: last?.target || "", unit: last?.unit || "" });
+      wireGoalsEditRowsTable();
+    });
+  }
   goalsGridEl.querySelectorAll(".goals-pause-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       const g = goalsData.find(x => x.id === btn.dataset.id);
@@ -2783,6 +2833,7 @@ function renderGoalsGrid() {
     btn.addEventListener("click", () => {
       goalsData = goalsData.filter(x => x.id !== btn.dataset.id);
       goalsEditingId = null;
+      goalsEditRows = null;
       goalsConfirmDeleteId = null;
       saveGoalsData();
       renderGoalsTabCounts();
@@ -2797,27 +2848,22 @@ function renderGoalsGrid() {
       const newName = document.getElementById("goals-edit-name").value.trim();
       const newCat = document.getElementById("goals-edit-cat").value;
       const newHealth = document.getElementById("goals-edit-health").value;
-      const newDate = document.getElementById("goals-edit-date").value || todayISO();
-      const newValue = document.getElementById("goals-edit-value").value.trim();
-      const newTarget = document.getElementById("goals-edit-target").value.trim();
-      const newUnit = document.getElementById("goals-edit-unit").value.trim();
+      const cumulative = document.getElementById("goals-edit-cumulative").checked;
       const pauseUntil = document.getElementById("goals-edit-pause-until").value;
       g.name = newName || g.name;
       g.cat = newCat || g.cat;
       g.health = newHealth || g.health;
+      g.cumulative = cumulative;
       if (pauseUntil) {
         g.paused = true;
         g.pausedUntil = pauseUntil;
       }
-      const existing = g.entries.find(e => e.date === newDate);
-      if (existing) {
-        existing.value = newValue || existing.value;
-        existing.target = newTarget || existing.target;
-        existing.unit = newUnit || existing.unit;
-      } else {
-        g.entries.push({ date: newDate, value: newValue, target: newTarget, unit: newUnit });
-      }
+      const newEntries = (goalsEditRows || [])
+        .filter(r => r.date)
+        .map(r => ({ date: r.date, value: (r.value || "").trim(), target: (r.target || "").trim(), unit: (r.unit || "").trim() }));
+      if (newEntries.length) g.entries = newEntries;
       goalsEditingId = null;
+      goalsEditRows = null;
       saveGoalsData();
       renderGoalsTabCounts();
       renderGoalsGrid();
