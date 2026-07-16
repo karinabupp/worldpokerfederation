@@ -631,22 +631,11 @@
     border-radius: 12px;
     overflow: hidden;
   }
+  .goals-card[draggable="true"] { cursor: grab; }
+  .goals-card[draggable="true"]:active { cursor: grabbing; }
   .goals-card-dragging { opacity: 0.4; }
   .goals-card-drop-before { box-shadow: inset 3px 0 0 var(--accent); }
   .goals-card-drop-after { box-shadow: inset -3px 0 0 var(--accent); }
-  .goals-drag-handle {
-    flex-shrink: 0;
-    cursor: grab;
-    color: var(--text-muted);
-    opacity: 0;
-    font-size: 14px;
-    line-height: 1;
-    user-select: none;
-    margin-right: 2px;
-  }
-  .goals-card:hover .goals-drag-handle { opacity: 0.55; }
-  .goals-drag-handle:hover { opacity: 1 !important; }
-  .goals-drag-handle:active { cursor: grabbing; }
   .goals-card-top { height: 5px; width: 100%; }
   .goals-card-body { padding: 20px 20px 22px; }
   .goals-card-topline { display: flex; align-items: center; justify-content: space-between; }
@@ -2642,7 +2631,6 @@ function goalsCardViewMarkup(g) {
     <div class="goals-card-body">
       <div class="goals-card-topline">
         <div class="goals-card-cat-group">
-          <span class="goals-drag-handle" data-id="${g.id}" draggable="true" title="Arrastar para reordenar">⠿</span>
           <span class="goals-card-cat">${g.cat}</span>
           <span class="goals-health-badge" style="color:${healthColor}">● ${g.health}</span>
         </div>
@@ -2834,23 +2822,19 @@ function renderGoalsGrid() {
 
   const items = goalsActiveCat === "Geral" ? goalsData : goalsData.filter(g => g.cat === goalsActiveCat);
   goalsGridEl.innerHTML = items.map(g => `
-    <div class="goals-card ${isGoalPaused(g) && g.id !== goalsEditingId ? "paused" : ""}" data-id="${g.id}">
+    <div class="goals-card ${isGoalPaused(g) && g.id !== goalsEditingId ? "paused" : ""}" data-id="${g.id}" ${g.id === goalsEditingId ? "" : 'draggable="true"'}>
       ${g.id === goalsEditingId ? goalsCardEditMarkup(g) : goalsCardViewMarkup(g)}
     </div>
   `).join("");
 
-  goalsGridEl.querySelectorAll(".goals-drag-handle").forEach(handle => {
-    handle.addEventListener("dragstart", (e) => {
-      goalsDragId = handle.dataset.id;
+  goalsGridEl.querySelectorAll(".goals-card[draggable='true']").forEach(card => {
+    card.addEventListener("dragstart", (e) => {
+      goalsDragId = card.dataset.id;
       e.dataTransfer.effectAllowed = "move";
       e.dataTransfer.setData("text/plain", goalsDragId);
-      const card = handle.closest(".goals-card");
-      if (card) {
-        e.dataTransfer.setDragImage(card, 20, 20);
-        card.classList.add("goals-card-dragging");
-      }
+      card.classList.add("goals-card-dragging");
     });
-    handle.addEventListener("dragend", () => {
+    card.addEventListener("dragend", () => {
       goalsDragId = null;
       goalsGridEl.querySelectorAll(".goals-card-dragging").forEach(c => c.classList.remove("goals-card-dragging"));
       goalsGridEl.querySelectorAll(".goals-card-drop-before, .goals-card-drop-after").forEach(c => c.classList.remove("goals-card-drop-before", "goals-card-drop-after"));
