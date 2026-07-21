@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Mapa Mundi Interativo — Pipeline WPF</title>
+<title>WPF Dashboard</title>
 <style>
   :root {
     --bg: #f5f4ee;
@@ -4677,10 +4677,7 @@ function renderAchievementIcons() {
       update => update.html(d => d.markup),
       exit => exit.remove()
     )
-    .attr("transform", d => {
-      const [cx, cy] = mainLandCentroid(d.feature);
-      return `translate(${cx}, ${cy + 9})`; // sits just below the centroid, clear of star/trading
-    });
+    .attr("transform", d => `translate(${mainLandCentroid(d.feature)})`);
 }
 
 // In Affiliations mode, a country with more than one affiliation gets a
