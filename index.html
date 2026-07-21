@@ -18,6 +18,7 @@
     --accent-dark: #0c447c;
   }
   * { box-sizing: border-box; }
+  html { scrollbar-gutter: stable; }
   body {
     margin: 0;
     background: var(--bg);
@@ -1011,8 +1012,8 @@
   }
   .side-card.closed { display: none; }
 
-  #legend-view h2 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
-  #legend-total { font-size: 14px; color: var(--text-muted); margin: 0; }
+  #legend-view h2, #social-summary-card h2 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  #legend-total, #social-summary-total { font-size: 14px; color: var(--text-muted); margin: 0; }
   .legend-row-wrap { border-bottom: 1px solid var(--border); }
   .legend-row-wrap:last-child { border-bottom: none; }
   .legend-row-wrap .legend-row { border-bottom: none; }
@@ -1031,6 +1032,7 @@
   .legend-dot { width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0; }
   .legend-stats { display: flex; align-items: baseline; gap: 8px; font-size: 14px; color: var(--text-muted); white-space: nowrap; }
   .legend-pct { font-size: 16px; font-weight: 500; color: var(--text); min-width: 46px; text-align: right; }
+  .legend-count { min-width: 62px; text-align: right; }
   .legend-dropdown {
     max-height: 220px;
     overflow-y: auto;
@@ -1058,6 +1060,7 @@
   .legend-subrow .legend-left { font-size: 14px; }
   .legend-subrow .legend-dot { width: 12px; height: 12px; }
   .legend-subrow .legend-pct { font-size: 14px; min-width: 40px; }
+  .legend-subrow .legend-count { min-width: 56px; }
   .legend-subrows .legend-dropdown { padding-left: 24px; }
   .legend-total-row {
     display: flex;
@@ -1508,6 +1511,52 @@
     font-weight: 600;
   }
   .social-tab.active .social-tab-count { background: rgba(255,255,255,0.22); }
+
+  /* Social analysis map view (map + sidebar, mirrors the Federations screen) */
+  #social-main-row { display: flex; gap: 16px; width: 100%; max-width: min(96vw, 1900px); align-items: flex-start; }
+  #social-map-wrap { position: relative; flex: 1 1 auto; min-width: 0; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+  #social-map { width: 100%; height: auto; display: block; background: var(--water); border-radius: 8px; }
+  #social-sidebar { flex: 0 0 300px; width: 300px; display: flex; flex-direction: column; }
+  #social-panel-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+  #social-panel-name { font-size: 18px; font-weight: 500; margin: 0; }
+  #social-panel-close { background: transparent; border: none; color: var(--text-muted); font-size: 20px; line-height: 1; cursor: pointer; padding: 0; }
+  #social-panel-close:hover { color: var(--text); }
+  .social-panel-section { margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
+  .social-panel-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .social-panel-section-title { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-muted); margin-bottom: 12px; }
+  .social-stat-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); gap: 10px; }
+  .social-stat-row:last-child { border-bottom: none; }
+  .social-stat-label { font-size: 14px; color: var(--text); }
+  .social-stat-value { font-size: 16px; font-weight: 600; color: var(--text); white-space: nowrap; }
+  .social-link-display {
+    font-size: 13px;
+    color: var(--accent);
+    padding: 8px 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow-wrap: anywhere;
+  }
+  .social-link-display.empty { color: var(--text-muted); font-style: italic; }
+  .social-link-display a { color: var(--accent); text-decoration: none; }
+  .social-link-display a:hover { text-decoration: underline; }
+  .social-ai-block { margin-top: 2px; }
+  .social-ai-badge {
+    display: inline-block;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 3px 11px;
+    border-radius: 20px;
+    margin-bottom: 8px;
+    color: #ffffff;
+    background: var(--land-default);
+  }
+  .social-ai-badge.level-Alta { background: #2f8f46; }
+  .social-ai-badge.level-Média { background: #e0a72e; }
+  .social-ai-badge.level-Baixa { background: #c0392b; }
+  .social-ai-badge.level-loading { background: var(--text-muted); }
+  .social-ai-badge.level-empty { background: var(--land-default); color: var(--text-muted); }
+  .social-ai-summary { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
 
   #social-search-bar { max-width: 320px; margin-bottom: 14px; }
 
@@ -1992,6 +2041,16 @@
           </div>
         </div>
 
+        <div class="field" id="social-field">
+          <label for="panel-social">Main Social Media</label>
+          <input id="panel-social" type="url" placeholder="https://instagram.com/...">
+        </div>
+
+        <div class="field" id="website-field">
+          <label for="panel-website">Website</label>
+          <input id="panel-website" type="url" placeholder="https://...">
+        </div>
+
         <div class="field" id="tournaments-field">
           <label for="panel-tournaments">Principais torneios</label>
           <textarea id="panel-tournaments" placeholder="Nome do torneio 1&#10;Nome do torneio 2"></textarea>
@@ -2119,19 +2178,53 @@
         <span class="active fedsoc-label-social">Social</span>
       </div>
     </div>
-    <div id="social-controls-row">
-      <div id="social-tabs">
-        <button class="social-tab active" data-filter="all" type="button">Todos <span class="social-tab-count"></span></button>
-        <button class="social-tab" data-filter="none" type="button">Baixa Performance <span class="social-tab-count"></span></button>
-        <button class="social-tab" data-filter="engage" type="button">Média Performance <span class="social-tab-count"></span></button>
-        <button class="social-tab" data-filter="high" type="button">Alta Performance <span class="social-tab-count"></span></button>
+
+    <div id="social-main-row">
+      <div id="social-map-wrap">
+        <svg id="social-map" viewBox="0 0 960 500"></svg>
       </div>
-      <select id="social-mode-select">
-        <option value="world">World</option>
-        <option value="br">BR</option>
-      </select>
+
+      <div id="social-sidebar">
+        <div id="social-summary-card" class="side-card">
+          <h2>Social</h2>
+          <p id="social-summary-total"></p>
+          <div id="social-summary-rows"></div>
+        </div>
+
+        <div id="social-panel" class="side-card closed">
+          <div id="social-panel-header">
+            <h2 id="social-panel-name"></h2>
+            <button id="social-panel-close" type="button" aria-label="Fechar">×</button>
+          </div>
+          <p class="field-hint" style="margin-top:-10px; margin-bottom:16px;">O nível de atividade é analisado por IA sempre que o país é aberto.</p>
+
+          <div class="social-panel-section">
+            <div class="social-panel-section-title">Website</div>
+            <div class="field">
+              <label for="social-website-url">Link</label>
+              <input id="social-website-url" type="url" placeholder="https://...">
+            </div>
+            <div class="social-ai-block">
+              <span id="social-website-badge" class="social-ai-badge">—</span>
+              <div id="social-website-summary" class="social-ai-summary">Selecione um país para analisar.</div>
+            </div>
+          </div>
+
+          <div class="social-panel-section">
+            <div class="social-panel-section-title">Social</div>
+            <div class="field">
+              <label for="social-social-url">Link</label>
+              <input id="social-social-url" type="url" placeholder="https://...">
+            </div>
+            <div class="social-ai-block">
+              <span id="social-social-badge" class="social-ai-badge">—</span>
+              <div id="social-social-summary" class="social-ai-summary">Selecione um país para analisar.</div>
+            </div>
+            <div class="field-hint">Links são salvos automaticamente (e valem também em Federations).</div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div id="social-country-grid"></div>
   </div>
 </div>
 
@@ -2183,6 +2276,12 @@ const STATUS_OPTIONS = [
   "Documentation",
   "Member"
 ];
+
+// Internal status keys (above) stay the same so existing saved data keeps
+// matching; this only controls what text the legend shows for each one.
+const STATUS_DISPLAY_LABELS = {
+  "Documentation": "Documents"
+};
 
 const STATUS_COLORS = {
   "Not Started":  { fill: "#cecbc0", badgeBg: "#f1efe8", badgeText: "#444441" },
@@ -2684,6 +2783,10 @@ function getRecord(name) {
   if (!rec.checklist) rec.checklist = {};
   if (rec.partner === undefined) rec.partner = "";
   if (rec.trading === undefined) rec.trading = false;
+  if (rec.website === undefined) rec.website = "";
+  if (rec.social === undefined) rec.social = "";
+  if (rec.websiteActivity === undefined) rec.websiteActivity = "";
+  if (rec.socialActivity === undefined) rec.socialActivity = "";
   return rec;
 }
 
@@ -5144,7 +5247,7 @@ function legendSubRowsMarkup(subRows, total) {
     return `<div class="legend-subrow-wrap">
       <div class="legend-row legend-row-clickable legend-subrow" data-subkey="${sr.key}">
         <div class="legend-left">${legendDotMarkup(sr.icon, sr.color)}${sr.label}</div>
-        <div class="legend-stats"><span class="legend-pct">${pct}%</span><span>${sr.count} países</span></div>
+        <div class="legend-stats"><span class="legend-pct">${pct}%</span><span class="legend-count">${sr.count} países</span></div>
       </div>
       ${isOpen ? `<div class="legend-dropdown">${legendDropdownMarkup(sr.names)}</div>` : ""}
     </div>`;
@@ -5162,7 +5265,7 @@ function legendRowsMarkup(rows, total) {
     return `<div class="legend-row-wrap">
       <div class="legend-row legend-row-clickable" data-key="${r.key}">
         <div class="legend-left">${dot}${r.label}</div>
-        <div class="legend-stats"><span class="legend-pct">${pct}%</span><span>${r.count} países</span></div>
+        <div class="legend-stats"><span class="legend-pct">${pct}%</span><span class="legend-count">${r.count} países</span></div>
       </div>
       ${expandedContent}
     </div>`;
@@ -5210,7 +5313,7 @@ function renderExpandableLegendRows(container, rows, total, unitLabel, onSelectN
     return `<div class="legend-row-wrap">
       <div class="legend-row legend-row-clickable" data-key="${r.key}">
         <div class="legend-left">${dot}${r.label}</div>
-        <div class="legend-stats"><span class="legend-pct">${pct}%</span><span>${r.count} ${unitLabel}</span></div>
+        <div class="legend-stats"><span class="legend-pct">${pct}%</span><span class="legend-count">${r.count} ${unitLabel}</span></div>
       </div>
       ${isOpen ? `<div class="legend-dropdown">${legendDropdownMarkup(r.names)}</div>` : ""}
     </div>`;
@@ -5283,14 +5386,14 @@ function renderLegend() {
   const memberSubRows = [
     { key: "__trading_member__", label: "Trading", color: STATUS_COLORS["Member"].fill, count: tradingCount, names: tradingNames, icon: "trading" },
     { key: "__digital_presence__", label: "Socials", color: STATUS_COLORS["Member"].fill, count: digitalPresenceCount, names: digitalPresenceNames, icon: "ig" },
-    { key: "__championships__", label: "Championships", color: STATUS_COLORS["Member"].fill, count: championshipsCount, names: championshipsNames, icon: "trophy" },
+    { key: "__championships__", label: "Champs", color: STATUS_COLORS["Member"].fill, count: championshipsCount, names: championshipsNames, icon: "trophy" },
     { key: "__star_member__", label: "Complete", color: STATUS_COLORS["Member"].fill, count: memberCompleteCount, names: starMemberNames, icon: "star" },
     { key: "__others__", label: "Others", color: STATUS_COLORS["Member"].fill, count: othersCount, names: othersNames, icon: null }
   ];
 
   const rows = STATUS_OPTIONS.map(status => ({
     key: status,
-    label: status,
+    label: STATUS_DISPLAY_LABELS[status] || status,
     color: STATUS_COLORS[status].fill,
     count: counts[status],
     names: namesByStatus[status],
@@ -5415,6 +5518,8 @@ const panelName = document.getElementById("panel-name");
 const panelStatus = document.getElementById("panel-status");
 const checklistEl = document.getElementById("checklist");
 const panelPartner = document.getElementById("panel-partner");
+const panelSocial = document.getElementById("panel-social");
+const panelWebsite = document.getElementById("panel-website");
 const panelTrading = document.getElementById("panel-trading");
 panelTrading.addEventListener("change", () => {
   if (!activeCountry || isCommitteeView()) return;
@@ -5433,7 +5538,7 @@ function populatePanelStatusOptions() {
   options.forEach(status => {
     const opt = document.createElement("option");
     opt.value = status;
-    opt.textContent = status;
+    opt.textContent = STATUS_DISPLAY_LABELS[status] || status;
     panelStatus.appendChild(opt);
   });
 }
@@ -5581,6 +5686,8 @@ function selectCountry(name, feature) {
   committeeEventsFieldEl.classList.toggle("hidden", !committeeMode || affiliationsMode);
   committeeAffiliationsFieldEl.classList.toggle("hidden", !affiliationsMode);
   document.getElementById("trading-field").classList.toggle("hidden", committeeMode);
+  document.getElementById("social-field").classList.toggle("hidden", committeeMode);
+  document.getElementById("website-field").classList.toggle("hidden", committeeMode);
   panelTrading.checked = !!rec.trading;
   if (!committeeMode) {
     CHECKLIST_ITEMS.forEach(item => {
@@ -5594,6 +5701,8 @@ function selectCountry(name, feature) {
     panelEvents.value = rec.events || 0;
   }
   panelPartner.value = rec.partner || "";
+  panelSocial.value = rec.social || "";
+  panelWebsite.value = rec.website || "";
   panelTournaments.value = rec.tournaments || "";
   saveConfirm.classList.remove("show");
 
@@ -6192,6 +6301,8 @@ function saveCountryFields(showConfirm) {
   } else {
     setRecord(activeCountry, {
       partner: panelPartner.value.trim(),
+      social: panelSocial.value.trim(),
+      website: panelWebsite.value.trim(),
       tournaments: panelTournaments.value.trim()
     });
   }
@@ -6201,7 +6312,7 @@ function saveCountryFields(showConfirm) {
   }
 }
 const autoSaveCountryFields = debounce(() => saveCountryFields(false), 600);
-[panelPartner, panelTournaments, panelEvents].forEach(el => {
+[panelPartner, panelSocial, panelWebsite, panelTournaments, panelEvents].forEach(el => {
   el.addEventListener("input", autoSaveCountryFields);
   el.addEventListener("blur", () => saveCountryFields(false));
 });
@@ -6428,6 +6539,319 @@ function bestSocialNetworkKey(rec) {
   return scored[0].key;
 }
 
+// --- Social & Website analysis screen: map + sidebar ---
+// The website/social links are only ever entered once (rec.website /
+// rec.social — shared with the Federations panel, editable from either
+// screen). Activity level is never picked manually: every time a country
+// is opened here, an AI call re-analyzes both links and sets it.
+const SOCIAL_LEVEL_FILL = {
+  "green": "#2f8f46",
+  "yellow": "#e0a72e",
+  "red": "#c0392b",
+  "gray": "#4a4a46",
+  "not-member": "#cecbc0"
+};
+
+// Green: both links Alta. Red: both links Baixa. Anything else with at
+// least one link present is Yellow. No links at all -> dark gray (Member
+// only). Non-members render as plain "not applicable" gray.
+function socialLinksColorLevel(name) {
+  const rec = getRecord(name);
+  if (rec.status !== "Member") return "not-member";
+  const hasWebsite = !!(rec.website && rec.website.trim());
+  const hasSocial = !!(rec.social && rec.social.trim());
+  if (!hasWebsite && !hasSocial) return "gray";
+  const webLevel = hasWebsite ? (rec.websiteActivity || "Baixa") : null;
+  const socLevel = hasSocial ? (rec.socialActivity || "Baixa") : null;
+  if (webLevel && socLevel) {
+    if (webLevel === "Alta" && socLevel === "Alta") return "green";
+    if (webLevel === "Baixa" && socLevel === "Baixa") return "red";
+    return "yellow";
+  }
+  const single = webLevel || socLevel;
+  if (single === "Alta") return "green";
+  if (single === "Baixa") return "red";
+  return "yellow";
+}
+
+function socialMapFill(name) {
+  return SOCIAL_LEVEL_FILL[socialLinksColorLevel(name)];
+}
+
+function computeSocialAggregate() {
+  const members = allCountries.map(f => f.properties.name).filter(name => getRecord(name).status === "Member");
+  let green = 0, yellow = 0, red = 0, gray = 0;
+  const greenNames = [], yellowNames = [], redNames = [], grayNames = [];
+  members.forEach(name => {
+    const level = socialLinksColorLevel(name);
+    if (level === "green") { green++; greenNames.push(name); }
+    else if (level === "yellow") { yellow++; yellowNames.push(name); }
+    else if (level === "red") { red++; redNames.push(name); }
+    else { gray++; grayNames.push(name); }
+  });
+  return {
+    total: members.length,
+    green, yellow, red, gray,
+    greenNames, yellowNames, redNames, grayNames
+  };
+}
+
+let socialLegendExpandedKey = null;
+
+function selectCountryFromSocialLegend(name) {
+  const feature = allCountries.find(f => f.properties.name === name);
+  if (!feature) return;
+  selectSocialCountry(name, feature);
+}
+
+function renderSocialSummary() {
+  const agg = computeSocialAggregate();
+  const totalEl = document.getElementById("social-summary-total");
+  if (totalEl) totalEl.textContent = agg.total ? agg.total + " federações Member" : "";
+  const rows = [
+    ["alta", "#2f8f46", "Alta", agg.green, agg.greenNames],
+    ["media", "#e0a72e", "Média", agg.yellow, agg.yellowNames],
+    ["baixa", "#c0392b", "Baixa", agg.red, agg.redNames],
+    ["sem-links", "#4a4a46", "Sem links", agg.gray, agg.grayNames]
+  ];
+  const rowsEl = document.getElementById("social-summary-rows");
+  if (rowsEl) {
+    rowsEl.innerHTML = rows.map(([key, color, label, count, names]) => {
+      const pct = agg.total ? Math.round((count / agg.total) * 100) : 0;
+      const isOpen = socialLegendExpandedKey === key;
+      return `<div class="legend-row-wrap">
+        <div class="legend-row legend-row-clickable" data-key="${key}">
+          <div class="legend-left"><span class="legend-dot" style="background:${color}"></span>${label}</div>
+          <div class="legend-stats"><span class="legend-pct">${pct}%</span><span class="legend-count">${count} países</span></div>
+        </div>
+        ${isOpen ? `<div class="legend-dropdown">${legendDropdownMarkup(names)}</div>` : ""}
+      </div>`;
+    }).join("");
+
+    rowsEl.querySelectorAll(".legend-row-clickable").forEach(row => {
+      row.addEventListener("click", () => {
+        const key = row.dataset.key;
+        socialLegendExpandedKey = socialLegendExpandedKey === key ? null : key;
+        renderSocialSummary();
+      });
+    });
+    rowsEl.querySelectorAll(".legend-dropdown-item").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        selectCountryFromSocialLegend(btn.dataset.name);
+      });
+    });
+  }
+}
+
+let socialMapSelectedCountry = null;
+let socialMapSelectedFeature = null;
+let socialHighlightPath = null, socialHighlightHalo = null;
+let socialAnalysisRequestId = 0;
+
+function refreshSocialMapColors() {
+  d3.select("#social-map").selectAll("path.country").attr("fill", d => socialMapFill(d.properties.name));
+}
+
+function renderSocialMap() {
+  const svgEl = d3.select("#social-map");
+  svgEl.selectAll("*").remove();
+  svgEl.attr("viewBox", WORLD_VIEWBOX);
+
+  socialHighlightHalo = svgEl.append("path").attr("class", "highlight-halo").attr("d", null);
+  socialHighlightPath = svgEl.append("path").attr("class", "highlight").attr("d", null);
+
+  svgEl.insert("g", "path.highlight")
+    .attr("id", "social-countries-layer")
+    .selectAll("path.country")
+    .data(allCountries)
+    .join("path")
+    .attr("class", "country")
+    .attr("d", path)
+    .attr("fill", d => socialMapFill(d.properties.name))
+    .attr("data-name", d => d.properties.name)
+    .on("mousemove", (event, d) => {
+      tooltip.textContent = d.properties.name;
+      tooltip.style.left = event.clientX + "px";
+      tooltip.style.top = event.clientY + "px";
+      tooltip.style.opacity = 1;
+    })
+    .on("mouseleave", () => { tooltip.style.opacity = 0; })
+    .on("click", (event, d) => selectSocialCountry(d.properties.name, d));
+
+  if (socialMapSelectedCountry && socialMapSelectedFeature) {
+    socialHighlightHalo.attr("d", path(socialMapSelectedFeature)).raise();
+    socialHighlightPath.attr("d", path(socialMapSelectedFeature)).raise();
+  }
+}
+
+const socialWebsiteUrlEl = document.getElementById("social-website-url");
+const socialSocialUrlEl = document.getElementById("social-social-url");
+const socialWebsiteBadgeEl = document.getElementById("social-website-badge");
+const socialWebsiteSummaryEl = document.getElementById("social-website-summary");
+const socialSocialBadgeEl = document.getElementById("social-social-badge");
+const socialSocialSummaryEl = document.getElementById("social-social-summary");
+
+function setSocialAiBlock(kind, level, text) {
+  const badgeEl = kind === "website" ? socialWebsiteBadgeEl : socialSocialBadgeEl;
+  const summaryEl = kind === "website" ? socialWebsiteSummaryEl : socialSocialSummaryEl;
+  badgeEl.className = "social-ai-badge" + (level ? ` level-${level}` : "");
+  badgeEl.textContent = level || "—";
+  summaryEl.textContent = text || "";
+}
+
+function loadSocialPanelFields(name) {
+  const rec = getRecord(name);
+  socialWebsiteUrlEl.value = rec.website || "";
+  socialSocialUrlEl.value = rec.social || "";
+}
+
+// Calls our AI proxy to analyze whichever links are filled in for this
+// country, sets the resulting activity level + a short summary, and
+// updates the map/summary once it lands. Re-run every time the country
+// panel opens (and after a link is edited), so it's always current.
+async function analyzeCountrySocialLinks(name) {
+  const requestId = ++socialAnalysisRequestId;
+  const rec = getRecord(name);
+  const websiteUrl = (rec.website || "").trim();
+  const socialUrl = (rec.social || "").trim();
+
+  if (!websiteUrl) setSocialAiBlock("website", "empty", "Nenhum link cadastrado.");
+  else setSocialAiBlock("website", "loading", "Analisando com IA...");
+
+  if (!socialUrl) setSocialAiBlock("social", "empty", "Nenhum link cadastrado.");
+  else setSocialAiBlock("social", "loading", "Analisando com IA...");
+
+  if (!websiteUrl && !socialUrl) return;
+
+  let result;
+  try {
+    result = await analyzeCountryLinksWithAI(websiteUrl, socialUrl);
+  } catch (err) {
+    console.warn("Social AI analysis failed:", err);
+    if (requestId !== socialAnalysisRequestId || socialMapSelectedCountry !== name) return;
+    const errMsg = "Não consegui analisar: " + (err && err.message ? err.message : "erro desconhecido");
+    if (websiteUrl) setSocialAiBlock("website", "", errMsg);
+    if (socialUrl) setSocialAiBlock("social", "", errMsg);
+    return;
+  }
+
+  if (requestId !== socialAnalysisRequestId || socialMapSelectedCountry !== name) return; // stale/switched away
+
+  const patch = {};
+  if (websiteUrl && result.website) {
+    const level = ["Alta", "Média", "Baixa"].includes(result.website.activity) ? result.website.activity : "Baixa";
+    patch.websiteActivity = level;
+    setSocialAiBlock("website", level, result.website.summary || "");
+  }
+  if (socialUrl && result.social) {
+    const level = ["Alta", "Média", "Baixa"].includes(result.social.activity) ? result.social.activity : "Baixa";
+    patch.socialActivity = level;
+    setSocialAiBlock("social", level, result.social.summary || "");
+  }
+  if (Object.keys(patch).length) {
+    setRecord(name, patch);
+    renderSocialSummary();
+    refreshSocialMapColors();
+  }
+}
+
+async function analyzeCountryLinksWithAI(websiteUrl, socialUrl) {
+  if (!SOCIAL_AI_PROXY_URL || SOCIAL_AI_PROXY_URL.includes("YOUR-SUBDOMAIN")) {
+    throw new Error("SOCIAL_AI_PROXY_URL não foi configurado ainda.");
+  }
+  const prompt = `Analise os links a seguir de uma federação esportiva de poker. Use busca na web em cada link que existir. Para cada um, determine:
+- activity: exatamente um de "Alta", "Média" ou "Baixa", pelo nível de atividade/frequência de postagens recentes
+- summary: um resumo curto em português (1-2 frases) do que você encontrou (conteúdo, frequência de posts, engajamento, seguidores se for rede social)
+
+Website: ${websiteUrl || "não cadastrado"}
+Rede social: ${socialUrl || "não cadastrado"}
+
+Responda APENAS com um JSON válido, sem markdown, sem texto antes ou depois. Omita a chave de um link que estiver "não cadastrado":
+{"website":{"activity":"Alta","summary":"..."},"social":{"activity":"Média","summary":"..."}}`;
+
+  const response = await fetch(SOCIAL_AI_PROXY_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 700,
+      messages: [{ role: "user", content: prompt }],
+      tools: [{ type: "web_search_20250305", name: "web_search" }]
+    })
+  });
+  if (!response.ok) {
+    const errText = await response.text().catch(() => "");
+    throw new Error(`Proxy respondeu ${response.status}: ${errText.slice(0, 200)}`);
+  }
+  const data = await response.json();
+  const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
+  const cleaned = text.replace(/```json|```/g, "").trim();
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  if (!match) return {};
+  try {
+    return JSON.parse(match[0]);
+  } catch (e) {
+    return {};
+  }
+}
+
+function selectSocialCountry(name, feature) {
+  socialMapSelectedCountry = name;
+  socialMapSelectedFeature = feature;
+  document.getElementById("social-summary-card").classList.add("closed");
+  document.getElementById("social-panel").classList.remove("closed");
+  document.getElementById("social-panel-name").textContent = name;
+
+  loadSocialPanelFields(name);
+  analyzeCountrySocialLinks(name);
+
+  if (socialHighlightHalo && socialHighlightPath) {
+    socialHighlightHalo.attr("d", path(feature)).raise();
+    socialHighlightPath.attr("d", path(feature)).raise();
+  }
+}
+
+document.getElementById("social-panel-close").addEventListener("click", () => {
+  socialMapSelectedCountry = null;
+  socialMapSelectedFeature = null;
+  document.getElementById("social-panel").classList.add("closed");
+  document.getElementById("social-summary-card").classList.remove("closed");
+  if (socialHighlightHalo) socialHighlightHalo.attr("d", null);
+  if (socialHighlightPath) socialHighlightPath.attr("d", null);
+});
+
+// Links are shared with the Federations panel (rec.website / rec.social) —
+// editing here saves there too, and re-triggers the AI analysis.
+function saveSocialWebsiteUrl() {
+  if (!socialMapSelectedCountry) return;
+  setRecord(socialMapSelectedCountry, { website: socialWebsiteUrlEl.value.trim() });
+  refreshSocialMapColors();
+  analyzeCountrySocialLinks(socialMapSelectedCountry);
+}
+function saveSocialSocialUrl() {
+  if (!socialMapSelectedCountry) return;
+  setRecord(socialMapSelectedCountry, { social: socialSocialUrlEl.value.trim() });
+  refreshSocialMapColors();
+  analyzeCountrySocialLinks(socialMapSelectedCountry);
+}
+const debouncedSaveSocialWebsiteUrl = debounce(saveSocialWebsiteUrl, 800);
+const debouncedSaveSocialSocialUrl = debounce(saveSocialSocialUrl, 800);
+socialWebsiteUrlEl.addEventListener("input", debouncedSaveSocialWebsiteUrl);
+socialWebsiteUrlEl.addEventListener("blur", saveSocialWebsiteUrl);
+socialSocialUrlEl.addEventListener("input", debouncedSaveSocialSocialUrl);
+socialSocialUrlEl.addEventListener("blur", saveSocialSocialUrl);
+
+function renderSocialAnalysisScreen() {
+  if (!allCountries.length) return; // topology hasn't loaded yet
+  renderSocialMap();
+  renderSocialSummary();
+  if (socialMapSelectedCountry) {
+    loadSocialPanelFields(socialMapSelectedCountry);
+    analyzeCountrySocialLinks(socialMapSelectedCountry); // re-analyze every time this screen opens
+  }
+}
+
 function socialNetDetailPanelMarkup(name, key) {
   if (!key) return `<div class="social-net-detail-empty">Nenhuma rede cadastrada ainda.</div>`;
   const net = getSocialRecord(name).networks[key];
@@ -6500,7 +6924,7 @@ function renderSocialCountryCards() {
 }
 
 function renderSocialTable() {
-  renderSocialCountryCards();
+  renderSocialAnalysisScreen();
 }
 
 document.querySelectorAll(".social-tab").forEach(tab => {
