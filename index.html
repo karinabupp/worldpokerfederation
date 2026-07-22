@@ -182,7 +182,7 @@
 
 
 
-  #settings-wrap { width: 100%; max-width: 720px; }
+  #settings-wrap { width: 100%; max-width: 860px; }
   #settings-title { font-size: 19px; font-weight: 700; margin: 6px 0 8px; }
   #settings-subtitle { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin: 0 0 22px; max-width: 640px; }
   #settings-add-row { display: flex; gap: 8px; margin-bottom: 22px; flex-wrap: wrap; }
@@ -222,6 +222,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-wrap: wrap;
   }
   .settings-user-name { font-weight: 600; flex: 1 1 auto; min-width: 0; }
   .settings-user-name-input {
@@ -232,9 +233,21 @@
     color: var(--text);
     padding: 4px 6px;
     border-radius: 5px;
-    width: 100%;
+    flex: 1 1 110px;
+    min-width: 90px;
   }
   .settings-user-name-input:focus { border-color: var(--border-strong); background: var(--bg); outline: none; }
+  .settings-user-email-input {
+    border: 1px solid var(--border);
+    background: var(--bg);
+    font-size: 12.5px;
+    color: var(--text-muted);
+    padding: 5px 8px;
+    border-radius: 5px;
+    flex: 1 1 160px;
+    min-width: 120px;
+  }
+  .settings-user-email-input:focus { color: var(--text); background: #ffffff; border-color: var(--border-strong); outline: none; }
   .settings-user-password-input {
     border: 1px solid var(--border);
     background: var(--bg);
@@ -242,9 +255,22 @@
     color: var(--text-muted);
     padding: 5px 8px;
     border-radius: 5px;
-    width: 130px;
+    width: 110px;
+    flex-shrink: 0;
   }
   .settings-user-password-input:focus { color: var(--text); background: #ffffff; border-color: var(--border-strong); outline: none; }
+  .settings-user-reset-btn {
+    border: 1px solid var(--border);
+    background: #ffffff;
+    color: var(--text-muted);
+    border-radius: 6px;
+    padding: 5px 9px;
+    font-size: 11.5px;
+    cursor: pointer;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .settings-user-reset-btn:hover { background: var(--land-default); color: var(--text); }
   .settings-role-badge {
     font-size: 11px;
     font-weight: 700;
@@ -304,19 +330,6 @@
   }
   .settings-perm-row input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent); flex-shrink: 0; }
   .settings-perm-label { font-size: 13px; color: var(--text); cursor: pointer; }
-  #settings-emails-row { display: flex; gap: 8px; align-items: center; }
-  #settings-manage-emails-wrap { position: relative; }
-  #settings-manage-emails-btn {
-    border: 1px solid var(--border-strong);
-    background: #ffffff;
-    border-radius: 6px;
-    padding: 8px 14px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text);
-    cursor: pointer;
-  }
-  #settings-manage-emails-btn:hover { background: var(--land-default); }
 
   #tasks-logo-row { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 20px; }
   #tasks-subnav { display: flex; align-items: center; gap: 6px; }
@@ -467,6 +480,8 @@
     cursor: pointer;
     text-decoration: underline;
     padding: 6px 4px;
+    margin-top: 16px;
+    display: inline-block;
   }
   #tasks-test-email-btn:hover { color: var(--accent); }
   #tasks-general-filter {
@@ -754,72 +769,6 @@
   .tasks-assignee-collapse:hover { background: var(--land-default); color: var(--text); }
   .tasks-col-assignee-head { display: flex; align-items: center; gap: 6px; }
   .tasks-head-row .tasks-col-assignee { position: relative; }
-  #tasks-manage-assignees-btn {
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-size: 13px;
-    padding: 2px;
-    line-height: 1;
-  }
-  #tasks-manage-assignees-btn:hover { color: var(--accent); }
-  #tasks-manage-assignees-popover {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    margin-top: 6px;
-    z-index: 40;
-    background: #ffffff;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-    padding: 10px;
-    width: 300px;
-    max-height: 60vh;
-    overflow-y: auto;
-    display: none;
-  }
-  #tasks-manage-assignees-popover.show { display: block; }
-  .tasks-manage-title { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 8px; }
-  .tasks-manage-person { padding: 6px 0; border-bottom: 1px solid var(--border); }
-  .tasks-manage-person:last-child { border-bottom: none; }
-  .tasks-manage-row { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
-  .tasks-manage-name-input {
-    flex: 1 1 auto;
-    min-width: 0;
-    border: 1px solid transparent;
-    background: transparent;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text);
-    padding: 4px 6px;
-    border-radius: 5px;
-  }
-  .tasks-manage-name-input:focus { border-color: var(--border-strong); background: var(--bg); outline: none; }
-  .tasks-manage-email-input {
-    width: 100%;
-    border: 1px solid transparent;
-    background: transparent;
-    font-size: 12px;
-    color: var(--text-muted);
-    padding: 3px 6px;
-    border-radius: 5px;
-    margin-top: 1px;
-  }
-  .tasks-manage-email-input:focus { border-color: var(--border-strong); background: var(--bg); outline: none; color: var(--text); }
-  .tasks-manage-email-input:invalid { color: #a3312a; }
-  .tasks-manage-delete-btn {
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-size: 13px;
-    flex-shrink: 0;
-    padding: 2px 4px;
-  }
-  .tasks-manage-delete-btn:hover { color: #e24b4a; }
-  .tasks-manage-empty { font-size: 12px; color: var(--text-muted); padding: 4px 0; }
   .tasks-kpi-select {
     border: 1px solid var(--border);
     background: #ffffff;
@@ -2139,8 +2088,7 @@
      Settings > Permissões checklist) cover the configurable ones. This is
      a client-side workflow gate, not a hard security boundary — see the
      login/auth script for the honest caveat about that. */
-  body.role-colab #nav-settings,
-  body.role-colab #tasks-manage-assignees-btn {
+  body.role-colab #nav-settings {
     display: none !important;
   }
   .hidden-by-perm { display: none !important; }
@@ -2409,13 +2357,7 @@
         <div class="tasks-col-status">Status</div>
         <div class="tasks-col-date">Início</div>
         <div class="tasks-col-date">Fim</div>
-        <div class="tasks-col-assignee">
-          <div class="tasks-col-assignee-head">
-            <span>Responsável</span>
-            <button id="tasks-manage-assignees-btn" type="button" title="Editar lista de responsáveis">⚙</button>
-          </div>
-          <div id="tasks-manage-assignees-popover"></div>
-        </div>
+        <div class="tasks-col-assignee">Responsável</div>
         <div class="tasks-col-kpi">KPI associado</div>
         <div class="tasks-col-actions"></div>
       </div>
@@ -2449,7 +2391,8 @@
     <p id="settings-subtitle">
       <strong>Adm</strong> tem acesso completo à dash e nunca vê essa aba se estiver logado como colab.
       <strong>Colab</strong> nunca vê Settings — o que cada colaborador pode ou não fazer é definido
-      individualmente, clicando em "Permissões" na linha da pessoa.
+      individualmente, clicando em "Permissões" na linha da pessoa. O email de cada um é o mesmo usado
+      no resumo diário de tasks — os "responsáveis" que aparecem em Tasks são esses usuários.
     </p>
     <div id="settings-add-row">
       <input type="text" id="settings-new-username" placeholder="Usuário (ex: joao)">
@@ -2461,16 +2404,9 @@
       <button id="settings-add-user-btn" type="button">+ Criar usuário</button>
     </div>
     <div id="settings-users-list"></div>
-
-    <h2 class="settings-section-title">Emails dos responsáveis</h2>
-    <p class="settings-section-subtitle">Usados pelo resumo diário de tasks por email (o script do Google Apps Script). Cada responsável precisa de um email cadastrado aqui pra receber o resumo.</p>
-    <div id="settings-emails-row">
-      <span id="settings-manage-emails-wrap">
-        <button id="settings-manage-emails-btn" type="button" title="Definir o email de cada responsável para o resumo diário por email">✉️ Emails dos responsáveis</button>
-      </span>
-      <button id="tasks-test-email-btn" type="button" title="Ver como ficaria o email diário de uma pessoa">🧪 Testar email</button>
-    </div>
+    <button id="tasks-test-email-btn" type="button" title="Ver como ficaria o email diário de uma pessoa">🧪 Testar email</button>
   </div>
+</div>
 </div>
 
 <div id="members-view" class="content-view hidden">
@@ -2969,7 +2905,6 @@ function collectAllData() {
     brazilStates: brazilStateData,
     goals: goalsData,
     tasks: tasksData,
-    assignees: assigneesList,
     users: usersList,
     social: socialData,
     socialBR: socialDataBR,
@@ -2989,7 +2924,6 @@ function applyAllData(data) {
   if (data.brazilStates) brazilStateData = data.brazilStates;
   if (data.goals) goalsData = data.goals.map(migrateGoalRecord);
   if (data.tasks) tasksData = data.tasks.map(t => ensureTaskDefaults(t));
-  if (data.assignees) assigneesList = normalizeAssigneesList(data.assignees);
   if (data.users && data.users.length) usersList = data.users.map(ensureUserDefaults);
   if (data.social) socialData = data.social;
   if (data.socialBR) socialDataBR = data.socialBR;
@@ -3001,7 +2935,6 @@ function applyAllData(data) {
   localStorage.setItem(BRAZIL_STATE_STORAGE_KEY, JSON.stringify(brazilStateData));
   localStorage.setItem(GOALS_STORAGE_KEY, JSON.stringify(goalsData));
   localStorage.setItem(TASKS_STORAGE_KEY, JSON.stringify(tasksData));
-  localStorage.setItem(ASSIGNEES_STORAGE_KEY, JSON.stringify(assigneesList));
   localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
   localStorage.setItem(SOCIAL_STORAGE_KEY, JSON.stringify(socialData));
   localStorage.setItem(SOCIAL_STORAGE_KEY_BR, JSON.stringify(socialDataBR));
@@ -3089,29 +3022,11 @@ const USERS_SEED = [
   { username: "karina", password: "bupp", role: "adm" }
 ];
 
-let usersList = [];
-try {
-  const storedUsers = JSON.parse(localStorage.getItem(USERS_STORAGE_KEY) || "null");
-  usersList = (Array.isArray(storedUsers) && storedUsers.length) ? storedUsers : USERS_SEED.map(u => ({ ...u }));
-} catch (e) {
-  usersList = USERS_SEED.map(u => ({ ...u }));
-}
-usersList = usersList.map(u => ensureUserDefaults(u));
-
-let currentUser = null;
-try {
-  currentUser = JSON.parse(localStorage.getItem(AUTH_SESSION_KEY) || "null");
-} catch (e) {
-  currentUser = null;
-}
-
-function isColab() { return !!currentUser && currentUser.role === "colab"; }
-function isAdm() { return !!currentUser && currentUser.role === "adm"; }
-
 // --- Per-user colab permissions — each colab account carries its own
 // permissions object (set in Settings, inside that person's row) instead
 // of one shared checklist for every colaborador. Adm always has full
-// access no matter what these say.
+// access no matter what these say. Declared here, before usersList is
+// first loaded below, since ensureUserDefaults() needs it immediately.
 const COLAB_PERMISSIONS_DEFAULT = {
   tasksGeral: false,
   tasksCreate: true,
@@ -3130,10 +3045,30 @@ const COLAB_PERMISSIONS_DEFAULT = {
 function ensureUserDefaults(u) {
   return {
     ...u,
+    email: u.email || "",
     permissions: { ...COLAB_PERMISSIONS_DEFAULT, ...(u.permissions || {}) },
     mustChangePassword: !!u.mustChangePassword
   };
 }
+
+let usersList = [];
+try {
+  const storedUsers = JSON.parse(localStorage.getItem(USERS_STORAGE_KEY) || "null");
+  usersList = (Array.isArray(storedUsers) && storedUsers.length) ? storedUsers : USERS_SEED.map(u => ({ ...u }));
+} catch (e) {
+  usersList = USERS_SEED.map(u => ({ ...u }));
+}
+usersList = usersList.map(u => ensureUserDefaults(u));
+
+let currentUser = null;
+try {
+  currentUser = JSON.parse(localStorage.getItem(AUTH_SESSION_KEY) || "null");
+} catch (e) {
+  currentUser = null;
+}
+
+function isColab() { return !!currentUser && currentUser.role === "colab"; }
+function isAdm() { return !!currentUser && currentUser.role === "adm"; }
 
 // true if the current user can do this — Adm always can; colab only if
 // their own permissions (set in their row in Settings) have it on. Reads
@@ -3308,13 +3243,15 @@ function renderSettingsUsersList() {
     return `
     <div class="settings-user-block" data-username="${uname}">
       <div class="settings-user-row">
-        <input type="text" class="settings-user-name-input" data-old="${uname}" value="${uname}">
+        <input type="text" class="settings-user-name-input" data-old="${uname}" value="${uname}" placeholder="Usuário">
+        <input type="email" class="settings-user-email-input" data-username="${uname}" value="${(u.email || "").replace(/"/g, "&quot;")}" placeholder="email@exemplo.com">
         <input type="text" class="settings-user-password-input" data-username="${uname}" value="${u.password.replace(/"/g, "&quot;")}">
         <span class="settings-role-badge ${u.role}">${u.role}</span>
         <select class="settings-user-role-select" data-username="${uname}">
           <option value="colab" ${u.role === "colab" ? "selected" : ""}>Colab</option>
           <option value="adm" ${u.role === "adm" ? "selected" : ""}>Adm</option>
         </select>
+        <button type="button" class="settings-user-reset-btn" data-username="${uname}" title="Volta a senha pra padrão (wpf2026) — a pessoa troca no próximo login">↺ Resetar senha</button>
         <button type="button" class="settings-user-delete-btn" data-username="${uname}" title="Excluir">🗑</button>
       </div>
       ${u.mustChangePassword ? `<div class="settings-provisional-note">⏳ Senha provisória — ${u.username} vai precisar trocar no próximo login</div>` : ""}
@@ -3349,12 +3286,22 @@ function renderSettingsUsersList() {
         localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(currentUser));
       }
       if (settingsExpandedPermsUser === oldName) settingsExpandedPermsUser = newName;
+      // Usernames double as the "responsável" name on tasks now, so a
+      // rename here needs to follow through everywhere they're assigned.
+      renameAssigneeEverywhere(oldName, newName);
       saveUsersList();
       renderSettingsUsersList();
       applyRolePermissions();
     }
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") input.blur(); });
     input.addEventListener("blur", commit);
+  });
+  el.querySelectorAll(".settings-user-email-input").forEach(input => {
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") input.blur(); });
+    input.addEventListener("blur", () => {
+      const u = usersList.find(x => x.username === input.dataset.username);
+      if (u) { u.email = input.value.trim(); saveUsersList(); }
+    });
   });
   el.querySelectorAll(".settings-user-password-input").forEach(input => {
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") input.blur(); });
@@ -3364,6 +3311,19 @@ function renderSettingsUsersList() {
       // Adm setting/changing someone's password here counts as a reset —
       // it's provisional until that person logs in and picks their own.
       u.password = input.value.trim();
+      u.mustChangePassword = true;
+      saveUsersList();
+      renderSettingsUsersList();
+    });
+  });
+  el.querySelectorAll(".settings-user-reset-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const u = usersList.find(x => x.username === btn.dataset.username);
+      if (!u) return;
+      // Back to the standard default — they log in with this and pick a
+      // new password of their own on that first login, same as a brand
+      // new account. Adm never sees/knows their final password.
+      u.password = "wpf2026";
       u.mustChangePassword = true;
       saveUsersList();
       renderSettingsUsersList();
@@ -3386,9 +3346,12 @@ function renderSettingsUsersList() {
   el.querySelectorAll(".settings-user-delete-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       if (usersList.length <= 1) return; // never delete the last account — no way back in
-      usersList = usersList.filter(u => u.username !== btn.dataset.username);
+      const uname = btn.dataset.username;
+      usersList = usersList.filter(u => u.username !== uname);
+      removeAssigneeEverywhere(uname); // unassign them from any tasks too
       saveUsersList();
       renderSettingsUsersList();
+      if (typeof renderTasksTable === "function") renderTasksTable();
     });
   });
   el.querySelectorAll(".settings-perms-toggle").forEach(btn => {
@@ -3418,7 +3381,7 @@ document.getElementById("settings-add-user-btn").addEventListener("click", () =>
   if (usersList.some(u => u.username.toLowerCase() === username.toLowerCase())) return; // name taken
   // New accounts always start with a provisional password — the person
   // sets their own real one on first login, so Adm never actually knows it.
-  usersList.push({ username, password, role, permissions: { ...COLAB_PERMISSIONS_DEFAULT }, mustChangePassword: true });
+  usersList.push({ username, password, role, email: "", permissions: { ...COLAB_PERMISSIONS_DEFAULT }, mustChangePassword: true });
   saveUsersList();
   renderSettingsUsersList();
   document.getElementById("settings-new-username").value = "";
@@ -3735,6 +3698,11 @@ const NAV_VIEWS = {
   "nav-tasks": "tasks-view",
   "nav-settings": "settings-view"
 };
+// Queried here (not inside the async map-load callback further down) so a
+// nav click before the world map finishes loading can't hit a
+// "before initialization" error on this — it's just existing checkboxes,
+// nothing to do with the map data.
+const fedSocToggles = document.querySelectorAll(".fedsoc-toggle");
 Object.keys(NAV_VIEWS).forEach(btnId => {
   document.getElementById(btnId).addEventListener("click", () => {
     if (btnId === "nav-settings" && isColab()) return; // belt-and-suspenders: button is CSS-hidden for colab too
@@ -4613,57 +4581,14 @@ const TASK_STATUS_COLORS = {
   "Cancelled":    { bg: "#efefec", text: "#6b6a63" }
 };
 
-// --- Assignee list (shared dropdown, editable — anyone can add new names) ---
-const ASSIGNEES_STORAGE_KEY = "wpf_assignees_data";
-const ASSIGNEES_SEED = ["Karina Bupp", "Roberto Lifschitz", "Leonardo Cavarge", "Isabela Castro"];
-// Renames applied to any already-saved data using the old short first names.
-const ASSIGNEE_RENAMES = { "Leonardo": "Leonardo Cavarge", "Karina": "Karina Bupp" };
-// Assignees used to be stored as plain name strings. Now each one also
-// carries an email (used for the daily task-digest send), so every entry is
-// a {name, email} object — this upgrades any old string-shaped data (from
-// localStorage or an older cloud snapshot) to that shape on the fly.
-function normalizeAssigneesList(list) {
-  if (!Array.isArray(list)) return [];
-  return list.map(a => (typeof a === "string" ? { name: a, email: "" } : { name: a.name, email: a.email || "" }));
-}
-let assigneesList = [];
-try {
-  const stored = JSON.parse(localStorage.getItem(ASSIGNEES_STORAGE_KEY) || "null");
-  assigneesList = (Array.isArray(stored) && stored.length) ? normalizeAssigneesList(stored) : ASSIGNEES_SEED.map(name => ({ name, email: "" }));
-} catch (e) {
-  assigneesList = ASSIGNEES_SEED.map(name => ({ name, email: "" }));
-}
-assigneesList.forEach(a => { if (ASSIGNEE_RENAMES[a.name]) a.name = ASSIGNEE_RENAMES[a.name]; });
-
-function saveAssigneesList() {
-  localStorage.setItem(ASSIGNEES_STORAGE_KEY, JSON.stringify(assigneesList));
-  scheduleCloudSave();
-}
-
-function addAssigneeName(name) {
-  const trimmed = name.trim();
-  if (!trimmed) return null;
-  const existing = assigneesList.find(a => a.name.toLowerCase() === trimmed.toLowerCase());
-  if (existing) return existing.name;
-  assigneesList.push({ name: trimmed, email: "" });
-  saveAssigneesList();
-  return trimmed;
-}
-
-function setAssigneeEmail(name, email) {
-  const a = assigneesList.find(a => a.name === name);
-  if (!a) return;
-  a.email = email.trim();
-  saveAssigneesList();
-}
-
+// --- Responsáveis (Tasks assignees) = usersList — no separate list. Any
+// login account can be assigned to a task; renaming or deleting a user
+// updates every task that already has them assigned, so nothing is left
+// stuck on a stale name.
 function walkAllTasks(list, fn) {
   list.forEach(t => { fn(t); walkAllTasks(t.subtasks, fn); });
 }
 
-// Renaming/removing a person from the shared list should also update every
-// task that already has them assigned, so the change is consistent
-// everywhere instead of leaving stale names stuck on old tasks.
 function renameAssigneeEverywhere(oldName, newName) {
   walkAllTasks(tasksData, t => {
     if (!t.assignees.includes(oldName)) return;
@@ -4681,108 +4606,6 @@ function removeAssigneeEverywhere(name) {
   saveTasksData();
 }
 
-// --- "Responsáveis" popover: rename/delete + set each person's email
-// (used to address their daily task-digest email). Shared between the
-// gear icon on the table header and the "Emails" button on the Geral tab —
-// whichever trigger is clicked, the popover node moves under it.
-let tasksManageAssigneesOpen = false;
-let tasksManageAssigneesAnchorBtn = null;
-
-function renderManageAssigneesPopover() {
-  const pop = document.getElementById("tasks-manage-assignees-popover");
-  pop.classList.toggle("show", tasksManageAssigneesOpen);
-  if (!tasksManageAssigneesOpen) { pop.innerHTML = ""; return; }
-  const esc = (s) => (s || "").replace(/"/g, "&quot;");
-  pop.innerHTML = `
-    <div class="tasks-manage-title">Responsáveis</div>
-    ${assigneesList.length ? assigneesList.map(a => `
-      <div class="tasks-manage-person">
-        <div class="tasks-manage-row">
-          <input type="text" class="tasks-manage-name-input" data-old="${esc(a.name)}" value="${esc(a.name)}">
-          <button type="button" class="tasks-manage-delete-btn" data-name="${esc(a.name)}" title="Excluir">🗑</button>
-        </div>
-        <input type="email" class="tasks-manage-email-input" data-name="${esc(a.name)}" value="${esc(a.email)}" placeholder="email@exemplo.com">
-      </div>
-    `).join("") : `<div class="tasks-manage-empty">Nenhum responsável ainda.</div>`}
-  `;
-  pop.querySelectorAll(".tasks-manage-name-input").forEach(input => {
-    function commitRename() {
-      const oldName = input.dataset.old;
-      const newName = input.value.trim();
-      if (!newName || newName === oldName) { input.value = oldName; return; }
-      const dupe = assigneesList.find(a => a.name.toLowerCase() === newName.toLowerCase() && a.name !== oldName);
-      const person = assigneesList.find(a => a.name === oldName);
-      if (!person) return;
-      if (dupe) {
-        // renaming onto an existing name — merge into it instead of
-        // creating a duplicate entry in the list (keep the existing
-        // person's email unless it's blank and the renamed one had one).
-        if (!dupe.email && person.email) dupe.email = person.email;
-        assigneesList = assigneesList.filter(a => a.name !== oldName);
-        renameAssigneeEverywhere(oldName, dupe.name);
-      } else {
-        person.name = newName;
-        renameAssigneeEverywhere(oldName, newName);
-      }
-      saveAssigneesList();
-      renderManageAssigneesPopover();
-      renderTasksTable();
-    }
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") input.blur();
-      if (e.key === "Escape") { input.value = input.dataset.old; input.blur(); }
-    });
-    input.addEventListener("blur", commitRename);
-  });
-  pop.querySelectorAll(".tasks-manage-email-input").forEach(input => {
-    function commitEmail() { setAssigneeEmail(input.dataset.name, input.value); }
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") input.blur();
-    });
-    input.addEventListener("blur", commitEmail);
-  });
-  pop.querySelectorAll(".tasks-manage-delete-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const name = btn.dataset.name;
-      assigneesList = assigneesList.filter(a => a.name !== name);
-      saveAssigneesList();
-      removeAssigneeEverywhere(name);
-      renderManageAssigneesPopover();
-      renderTasksTable();
-    });
-  });
-}
-
-function toggleAssigneesManager(anchorWrapperEl, btnEl) {
-  const pop = document.getElementById("tasks-manage-assignees-popover");
-  if (tasksManageAssigneesOpen && tasksManageAssigneesAnchorBtn === btnEl) {
-    tasksManageAssigneesOpen = false;
-    renderManageAssigneesPopover();
-    return;
-  }
-  anchorWrapperEl.appendChild(pop);
-  tasksManageAssigneesAnchorBtn = btnEl;
-  tasksManageAssigneesOpen = true;
-  renderManageAssigneesPopover();
-}
-
-document.getElementById("tasks-manage-assignees-btn").addEventListener("click", (e) => {
-  e.stopPropagation();
-  toggleAssigneesManager(e.currentTarget.closest(".tasks-col-assignee"), e.currentTarget);
-});
-document.getElementById("settings-manage-emails-btn").addEventListener("click", (e) => {
-  e.stopPropagation();
-  toggleAssigneesManager(document.getElementById("settings-manage-emails-wrap"), e.currentTarget);
-});
-document.addEventListener("click", (e) => {
-  if (!tasksManageAssigneesOpen) return;
-  const pop = document.getElementById("tasks-manage-assignees-popover");
-  if (pop.contains(e.target) || (tasksManageAssigneesAnchorBtn && tasksManageAssigneesAnchorBtn.contains(e.target))) return;
-  tasksManageAssigneesOpen = false;
-  renderManageAssigneesPopover();
-});
-
-let tasksAddingAssigneeId = null; // id of a task currently showing the inline "add new name" input
 let tasksAssigneePickerId = null; // id of a task currently showing the "pick an existing name" dropdown
 let tasksAssigneeExpandedId = null; // id of a task showing all its assignee chips instead of the "Name +N" summary
 
@@ -4796,15 +4619,11 @@ function assigneeCellMarkup(t, colab) {
     return `<div class="tasks-assignee-chips">${fullChips || `<span class="tasks-assignee-chip" style="color:var(--text-muted);">—</span>`}</div>`;
   }
 
-  if (tasksAddingAssigneeId === t.id) {
-    return `<div class="tasks-assignee-chips">${fullChips}</div><input type="text" class="tasks-assignee-new-input" data-id="${t.id}" placeholder="Nome novo…" autofocus>`;
-  }
   if (tasksAssigneePickerId === t.id) {
-    const available = assigneesList.filter(a => !t.assignees.includes(a.name));
+    const available = usersList.filter(u => !t.assignees.includes(u.username));
     return `<div class="tasks-assignee-chips">${fullChips}</div><select class="tasks-assignee-select" data-id="${t.id}">
       <option value="">Escolher…</option>
-      ${available.map(a => `<option value="${a.name}">${a.name}</option>`).join("")}
-      <option value="__add_new__">+ Adicionar nome…</option>
+      ${available.map(u => `<option value="${u.username}">${u.username}</option>`).join("")}
     </select>`;
   }
 
@@ -4857,7 +4676,6 @@ function ensureTaskDefaults(t, depth) {
     t.assignees = t.assignee ? [t.assignee] : []; // migrate old single-assignee field
   }
   delete t.assignee;
-  t.assignees = t.assignees.map(n => ASSIGNEE_RENAMES[n] || n);
   if (t.kpiLink === undefined) t.kpiLink = "";
   // "rowType" is the explicit task/subtask classification the user picks per
   // row (drives whether the row gets a status color). For data saved before
@@ -4975,7 +4793,12 @@ function parseNotionStatus(str) {
 function parseNotionAssignees(str) {
   if (!str || !str.trim()) return undefined;
   const names = str.split(",").map(s => s.trim()).filter(Boolean);
-  return names.map(n => addAssigneeName(n)).filter(Boolean);
+  // Responsáveis are user accounts now — a pasted name only sticks if it
+  // matches an existing username; anything else is silently dropped since
+  // there's no more "create a new name on the fly" shortcut.
+  return names
+    .map(n => (usersList.find(u => u.username.toLowerCase() === n.toLowerCase()) || {}).username)
+    .filter(Boolean);
 }
 
 // One line of pasted text -> a partial task object. A line with no tabs is
@@ -5262,35 +5085,11 @@ function renderTasksTable() {
     select.addEventListener("change", () => {
       const t = findTaskById(tasksData, select.dataset.id);
       if (!t) return;
-      if (select.value === "__add_new__") {
-        tasksAssigneePickerId = null;
-        tasksAddingAssigneeId = select.dataset.id;
-        renderTasksTable();
-        return;
-      }
       if (select.value && !t.assignees.includes(select.value)) t.assignees.push(select.value);
       tasksAssigneePickerId = null;
       saveTasksData();
       renderTasksTable();
     });
-  });
-  body.querySelectorAll(".tasks-assignee-new-input").forEach(input => {
-    input.focus();
-    function commit() {
-      const t = findTaskById(tasksData, input.dataset.id);
-      tasksAddingAssigneeId = null;
-      if (t && input.value.trim()) {
-        const name = addAssigneeName(input.value);
-        if (name && !t.assignees.includes(name)) t.assignees.push(name);
-        saveTasksData();
-      }
-      renderTasksTable();
-    }
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") commit();
-      if (e.key === "Escape") { tasksAddingAssigneeId = null; renderTasksTable(); }
-    });
-    input.addEventListener("blur", commit);
   });
   body.querySelectorAll(".tasks-status-select").forEach(select => {
     select.addEventListener("change", () => {
@@ -5549,7 +5348,7 @@ function populateTasksGeneralFilter() {
   const sel = document.getElementById("tasks-general-filter");
   const current = sel.value;
   sel.innerHTML = `<option value="">Todos</option>` +
-    assigneesList.map(a => `<option value="${a.name}" ${a.name === current ? "selected" : ""}>${a.name}</option>`).join("");
+    usersList.map(u => `<option value="${u.username}" ${u.username === current ? "selected" : ""}>${u.username}</option>`).join("");
   sel.value = tasksGeneralFilter;
 }
 
@@ -5659,7 +5458,7 @@ function renderEmailPreview(personName) {
   }
   openBtn.classList.remove("hidden");
   openBtn.dataset.name = personName;
-  const person = assigneesList.find(a => a.name === personName);
+  const person = usersList.find(u => u.username === personName);
   const grouped = buildDigestForPerson(personName);
   const total = EMAIL_DIGEST_ORDER.reduce((sum, s) => sum + grouped[s].length, 0);
   const firstName = personName.split(" ")[0];
@@ -5700,8 +5499,8 @@ function renderEmailPreview(personName) {
 function populateEmailTestPicker() {
   const sel = document.getElementById("email-test-person-select");
   const current = sel.value;
-  sel.innerHTML = assigneesList.map(a => `<option value="${a.name}">${a.name}${a.email ? "" : " (sem email)"}</option>`).join("");
-  if (assigneesList.some(a => a.name === current)) sel.value = current;
+  sel.innerHTML = usersList.map(u => `<option value="${u.username}">${u.username}${u.email ? "" : " (sem email)"}</option>`).join("");
+  if (usersList.some(u => u.username === current)) sel.value = current;
 }
 
 function openEmailTestModal() {
@@ -6829,7 +6628,6 @@ function setAffiliationsMode(showAffiliations) {
 // .fedsoc-toggle class so either can be used to jump between the two.
 // (In Committee mode the members-view copy means Ladies/Affiliations
 // instead — see setAffiliationsMode above.)
-const fedSocToggles = document.querySelectorAll(".fedsoc-toggle");
 function setFedSocMode(showSocial) {
   const targetView = showSocial ? "social-view" : "members-view";
   new Set(Object.values(NAV_VIEWS).concat(["social-view"])).forEach(viewId => {
