@@ -390,6 +390,7 @@
   #marketing-logo-row { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 24px; }
   #marketing-sync-status { font-size: 12px; color: var(--text-muted); }
   #marketing-charts-row { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+  #marketing-charts-row-2 { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; margin-top: 20px; }
   .mkt-chart-col { flex: 1 1 460px; max-width: 620px; }
   .mkt-section { margin-bottom: 30px; }
   .mkt-section-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
@@ -1768,7 +1769,7 @@
   .overdue-task-empty { font-size: 13px; color: var(--text-muted); padding: 20px 0; text-align: center; }
 
   /* --- Social tab --- */
-  #social-wrap { width: 100%; max-width: min(96vw, 1900px); margin: 0 auto; }
+  #social-wrap { width: 100%; max-width: min(96vw, 1900px); }
   #social-logo-row {
     display: flex;
     align-items: center;
@@ -2212,6 +2213,52 @@
           </div>
         </div>
         <div class="mkt-chart-card"><canvas id="chart-social-followers"></canvas></div>
+      </div>
+
+      <div class="mkt-chart-col">
+        <div class="mkt-section-head">
+          <h3>PR</h3>
+          <span class="mkt-section-sub">Progressão de menções</span>
+          <div class="mkt-agg-toggle" data-target="mentions">
+            <button class="mkt-agg-btn" data-agg="weekly" type="button">Semana</button>
+            <button class="mkt-agg-btn active" data-agg="monthly" type="button">Mês</button>
+          </div>
+        </div>
+        <div class="mkt-chart-card"><canvas id="chart-pr-mentions"></canvas></div>
+      </div>
+
+      <div class="mkt-chart-col">
+        <div class="mkt-section-head">
+          <h3>Website</h3>
+          <span class="mkt-section-sub">Acessos — meta vs. atingido, por mês</span>
+        </div>
+        <div class="mkt-chart-card"><canvas id="chart-website"></canvas></div>
+      </div>
+    </div>
+
+    <div id="marketing-charts-row-2">
+      <div class="mkt-chart-col">
+        <div class="mkt-section-head">
+          <h3>Campanhas de AdWords</h3>
+          <span class="mkt-section-sub">Acessos ao site (cliques), por mês</span>
+        </div>
+        <div class="mkt-chart-card"><canvas id="chart-ads-clicks"></canvas></div>
+      </div>
+
+      <div class="mkt-chart-col">
+        <div class="mkt-section-head">
+          <h3>Budget AdWords</h3>
+          <span class="mkt-section-sub">Uso do budget (spend), por mês</span>
+        </div>
+        <div class="mkt-chart-card"><canvas id="chart-ads-budget"></canvas></div>
+      </div>
+
+      <div class="mkt-chart-col">
+        <div class="mkt-section-head">
+          <h3>CPC AdWords</h3>
+          <span class="mkt-section-sub">Custo por clique, por mês</span>
+        </div>
+        <div class="mkt-chart-card"><canvas id="chart-ads-cpc"></canvas></div>
       </div>
     </div>
   </div>
@@ -2953,12 +3000,10 @@ try {
 }
 usersList = usersList.map(u => ensureUserDefaults(u));
 
+// Sessions are never restored across page loads — every fresh open of the
+// dashboard starts at the login screen, so it always knows for sure who's
+// actually using it right now instead of trusting whoever was on it last.
 let currentUser = null;
-try {
-  currentUser = JSON.parse(localStorage.getItem(AUTH_SESSION_KEY) || "null");
-} catch (e) {
-  currentUser = null;
-}
 
 function isColab() { return !!currentUser && currentUser.role === "colab"; }
 function isAdm() { return !!currentUser && currentUser.role === "adm"; }
@@ -3101,11 +3146,7 @@ if (loginGateLogoImg && document.getElementById("logo")) {
   loginGateLogoImg.src = document.getElementById("logo").src;
 }
 
-if (currentUser) {
-  hideLoginGate();
-} else {
-  showLoginGate();
-}
+showLoginGate();
 // applyRolePermissions() also runs once the rest of the page's render
 // functions exist — see the bottom of the file, right after first paint.
 
@@ -4764,7 +4805,7 @@ function deleteTaskById(list, id) {
   return false;
 }
 
-let tasksExpanded = new Set(TASKS_SEED_DATA.map(t => t.id));
+let tasksExpanded = new Set(); // collapsed by default — nothing auto-expands on load
 let tasksConfirmDeleteId = null;
 let tasksSelectedIds = new Set(); // subtasks currently checked for bulk drag/move
 let tasksDragIds = []; // ids actually being dragged in the current drag gesture
@@ -8127,9 +8168,12 @@ importFile.addEventListener("change", () => {
 // ═══════════════════════════════════════════════════════════
 const MKT_SHEET_ID = "1zRHJuj1-aP_KzuK0f7WVDhog3fKve2uXaRJ5JuLC-jE";
 const MKT_GIDS = {
-  igHistorico: "25906588"         // Social - Instagram Historico: Data (diário), Seguidores, Reach, Views, Likes...
+  igHistorico: "25906588",        // Social - Instagram Historico: Data (diário), Seguidores, Reach, Views, Likes...
+  prMencoes: "1485007269",        // PR - Mencoes: banco de dados de menções, uma linha por menção (ID, Data, ..., Falso Positivo)
+  siteMetaAtingido: "1757891384", // Site - Analytics GA4: Mes, Meta 2026, Atingido (mensal)
+  adsAccount: "982839140"         // Ads - Google Ads: "HISTORICO MENSAL - CONTA COMPLETA" (Mes, Spend, Impressoes, Cliques, CTR, CPC, CPM, Conversoes), depois "POR CAMPANHA" (ignorado)
   // Site/Ads GIDs removed along with those charts — re-add here if they come back:
-  // siteMetas: "1597253817", siteAnalytics: "1757891384", adsMetas: "1698485948"
+  // adsMetas: "1698485948"
 };
 const MKT_SNAPSHOT_KEY = "wpf_marketing_snapshot_v2";
 
@@ -8162,7 +8206,7 @@ function mktParseCsv(text) {
 function mktFindHeaderRow(rows) {
   for (let i = 0; i < rows.length; i++) {
     const first = (rows[i][0] || "").trim();
-    if (first === "Mes" || first === "Data") return i;
+    if (first === "Mes" || first === "Data" || first === "ID") return i;
   }
   return 0;
 }
@@ -8347,6 +8391,155 @@ function renderFollowersChart() {
 function renderMarketingCharts() {
   if (!mktData) return;
   renderFollowersChart();
+  renderMentionsChart();
+  renderWebsiteChart();
+  renderAdsCharts();
+}
+
+// ── AdWords charts (Cliques, Spend, CPC) ───────────────────────────────
+
+// The sheet has TWO tables stacked in one tab: account-wide monthly totals
+// first, then a second "por campanha" table further down with a different
+// column layout. Both start their row's first cell with a month like
+// "Set/2024", so we can't just filter by that — instead take rows from the
+// top only until the pattern breaks (the campaign table is preceded by a
+// section-title row and a second header row, neither of which match).
+function mktTakeLeadingMonths(rows) {
+  const out = [];
+  for (const r of rows) {
+    if (!/^[A-Za-zçÇéÉ]{3}\/\d{4}$/.test((r.Mes || "").trim())) break;
+    out.push(r);
+  }
+  return out;
+}
+
+function renderAdsCharts() {
+  const raw = (mktData && mktData.adsAccount) || [];
+  const months = mktTakeLeadingMonths(raw);
+  const ids = ["chart-ads-clicks", "chart-ads-budget", "chart-ads-cpc"];
+  if (!months.length) {
+    ids.forEach(id => mktCardNote(id, "Sem dados — não consegui carregar \"Ads - Google Ads\"."));
+    return;
+  }
+  ids.forEach(id => mktCardNote(id, null));
+
+  const labels = months.map(r => r.Mes);
+  const clicks = months.map(r => mktParseNum(r.Cliques) || 0);
+  const spend = months.map(r => mktParseNum(r.Spend) || 0);
+  const cpc = months.map(r => mktParseNum(r.CPC) || 0);
+
+  mktChart("chart-ads-clicks", {
+    type: "line",
+    data: { labels, datasets: [{ label: "Cliques", data: clicks, borderColor: "#1f6feb", backgroundColor: "#1f6feb", tension: 0.3, pointRadius: 3, fill: false }] },
+    options: mktBarOptions()
+  });
+  mktChart("chart-ads-budget", {
+    type: "line",
+    data: { labels, datasets: [{ label: "Spend (USD)", data: spend, borderColor: "#2f6f4f", backgroundColor: "#2f6f4f", tension: 0.3, pointRadius: 3, fill: false }] },
+    options: mktBarOptions()
+  });
+  mktChart("chart-ads-cpc", {
+    type: "line",
+    data: { labels, datasets: [{ label: "CPC (USD)", data: cpc, borderColor: "#e8590c", backgroundColor: "#e8590c", tension: 0.3, pointRadius: 3, fill: false }] },
+    options: mktBarOptions()
+  });
+}
+
+// ── Website chart (Meta vs. Atingido) ──────────────────────────────────
+
+function renderWebsiteChart() {
+  const rows = (mktData && mktData.siteMetaAtingido) || [];
+  if (!rows.length) {
+    mktCardNote("chart-website", "Sem dados — não consegui carregar \"Site - Analytics GA4\".");
+    return;
+  }
+  // The sheet has one row per month (Jan–Dez) plus a "Total" summary row at
+  // the end — only the months belong in the chart.
+  const months = rows.filter(r => r.Mes && r.Mes !== "Total");
+  if (!months.length) {
+    mktCardNote("chart-website", "Sem dados — não consegui carregar \"Site - Analytics GA4\".");
+    return;
+  }
+  mktCardNote("chart-website", null);
+
+  const labels = months.map(r => r.Mes);
+  const metaData = months.map(r => mktParseNum(r["Meta 2026"]));
+  // Months that haven't happened yet are recorded as 0 in the sheet — shown
+  // as a gap (null) instead of a drop to zero, so the line doesn't look
+  // like traffic crashed.
+  const atingidoData = months.map(r => {
+    const v = mktParseNum(r.Atingido);
+    return v ? v : null;
+  });
+
+  mktChart("chart-website", {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        { label: "Meta", data: metaData, borderColor: "#9c9a92", backgroundColor: "#9c9a92", borderDash: [5, 4], tension: 0.2, pointRadius: 3, fill: false },
+        { label: "Atingido", data: atingidoData, borderColor: "#2f6f4f", backgroundColor: "#2f6f4f", tension: 0.3, pointRadius: 3, fill: false }
+      ]
+    },
+    options: mktBarOptions()
+  });
+}
+
+// ── Mentions-progression chart (PR) ────────────────────────────────────
+
+let mktMentionsAgg = "monthly";
+
+// "Data" in this sheet is DD/MM/YYYY, not ISO — convert so it sorts/buckets
+// correctly alongside every other date-keyed series in this file.
+function prParseDateBR(s) {
+  const [d, m, y] = (s || "").split("/");
+  if (!d || !m || !y) return null;
+  return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+}
+
+// PR - Mencoes is one row per mention (not pre-aggregated) — drop the ones
+// flagged "Falso Positivo" (false positive) and give each real mention a
+// Count of 1, so summing Count per bucket via mktAggregateSeries is exactly
+// "how many mentions in that day/week/month".
+function prPrepareMentions(rows) {
+  return rows
+    .filter(r => (r["Falso Positivo"] || "").trim().toUpperCase() !== "TRUE")
+    .map(r => ({ DataISO: prParseDateBR(r.Data), Count: "1" }))
+    .filter(r => r.DataISO);
+}
+
+function renderMentionsChart() {
+  const raw = (mktData && mktData.prMencoes) || [];
+  if (!raw.length) {
+    mktCardNote("chart-pr-mentions", "Sem dados — não consegui carregar \"PR - Menções\".");
+    return;
+  }
+  const rows = prPrepareMentions(raw);
+  if (!rows.length) {
+    mktCardNote("chart-pr-mentions", "Sem menções válidas (todas marcadas como falso positivo?).");
+    return;
+  }
+  mktCardNote("chart-pr-mentions", null);
+
+  const agg = mktAggregateSeries(rows, "DataISO", ["Count"], mktMentionsAgg, "sum");
+  const labels = mktMentionsAgg === "monthly" ? agg.labels.map(mktFormatMonthLabel) : agg.labels;
+
+  mktChart("chart-pr-mentions", {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        label: "Menções",
+        data: agg.series[0],
+        borderColor: "#e8590c",
+        backgroundColor: "#e8590c",
+        tension: 0.3,
+        pointRadius: 3,
+        fill: false
+      }]
+    },
+    options: mktBarOptions()
+  });
 }
 
 
@@ -8355,7 +8548,7 @@ async function loadMarketingData() {
   let cached = null;
   try { cached = JSON.parse(localStorage.getItem(MKT_SNAPSHOT_KEY) || "null"); } catch (e) { cached = null; }
 
-  const keys = ["igHistorico"];
+  const keys = ["igHistorico", "prMencoes", "siteMetaAtingido", "adsAccount"];
   const results = await Promise.allSettled(keys.map(k => mktFetchSheet(MKT_GIDS[k])));
 
   const next = Object.assign({}, mktData || cached || {});
@@ -8387,9 +8580,15 @@ marketingLogoRow.prepend(marketingLogoClone);
 document.querySelectorAll(".mkt-agg-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     const group = btn.closest(".mkt-agg-toggle");
-    mktFollowersAgg = btn.dataset.agg;
+    const target = group.dataset.target;
     group.querySelectorAll(".mkt-agg-btn").forEach(b => b.classList.toggle("active", b === btn));
-    renderFollowersChart();
+    if (target === "followers") {
+      mktFollowersAgg = btn.dataset.agg;
+      renderFollowersChart();
+    } else if (target === "mentions") {
+      mktMentionsAgg = btn.dataset.agg;
+      renderMentionsChart();
+    }
   });
 });
 
