@@ -263,6 +263,28 @@
 
   #tasks-general-filter-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
   #tasks-general-filter-row label { font-size: 12.5px; color: var(--text-muted); font-weight: 500; }
+  #tasks-manage-emails-wrap { position: relative; margin-left: auto; }
+  #tasks-manage-emails-btn {
+    border: 1px solid var(--border-strong);
+    background: #ffffff;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+  }
+  #tasks-manage-emails-btn:hover { background: var(--land-default); }
+  #tasks-test-email-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 6px 4px;
+  }
+  #tasks-test-email-btn:hover { color: var(--accent); }
   #tasks-general-filter {
     border: 1px solid var(--border);
     background: #ffffff;
@@ -395,6 +417,33 @@
   .tasks-drag-handle:hover { opacity: 1 !important; }
   .tasks-drag-handle:active { cursor: grabbing; }
   .tasks-row-selected { box-shadow: inset 3px 0 0 var(--accent); }
+  /* Fill handle: small square that appears on a focused cell (name, status,
+     dates, kpi) so you can drag its value down/up onto the rows around it,
+     like a spreadsheet's autofill handle. */
+  .tasks-col-name, .tasks-col-status, .tasks-col-date, .tasks-col-kpi { position: relative; }
+  .tasks-fill-handle {
+    display: none;
+    position: absolute;
+    right: 3px;
+    bottom: 4px;
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border: 1px solid #ffffff;
+    box-shadow: 0 0 0 1px var(--accent);
+    border-radius: 2px;
+    cursor: crosshair;
+    z-index: 5;
+  }
+  .tasks-name-input:focus ~ .tasks-fill-handle,
+  .tasks-status-select:focus ~ .tasks-fill-handle,
+  .tasks-date-input:focus ~ .tasks-fill-handle,
+  .tasks-kpi-select:focus ~ .tasks-fill-handle,
+  .tasks-fill-handle.dragging {
+    display: block;
+  }
+  .tasks-fill-target { box-shadow: inset 0 0 0 2px var(--accent); background: rgba(24,95,165,0.08); }
+  body.tasks-fill-active { user-select: none; }
   .tasks-row-dragging { opacity: 0.4; }
   .tasks-row-drop-target { box-shadow: inset 0 0 0 2px var(--accent); }
   .tasks-head-row {
@@ -542,23 +591,40 @@
     border-radius: 10px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.12);
     padding: 10px;
-    width: 240px;
+    width: 300px;
+    max-height: 60vh;
+    overflow-y: auto;
     display: none;
   }
   #tasks-manage-assignees-popover.show { display: block; }
   .tasks-manage-title { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 8px; }
-  .tasks-manage-row { display: flex; align-items: center; gap: 6px; padding: 4px 0; }
+  .tasks-manage-person { padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .tasks-manage-person:last-child { border-bottom: none; }
+  .tasks-manage-row { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
   .tasks-manage-name-input {
     flex: 1 1 auto;
     min-width: 0;
     border: 1px solid transparent;
     background: transparent;
     font-size: 13px;
+    font-weight: 600;
     color: var(--text);
     padding: 4px 6px;
     border-radius: 5px;
   }
   .tasks-manage-name-input:focus { border-color: var(--border-strong); background: var(--bg); outline: none; }
+  .tasks-manage-email-input {
+    width: 100%;
+    border: 1px solid transparent;
+    background: transparent;
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 3px 6px;
+    border-radius: 5px;
+    margin-top: 1px;
+  }
+  .tasks-manage-email-input:focus { border-color: var(--border-strong); background: var(--bg); outline: none; color: var(--text); }
+  .tasks-manage-email-input:invalid { color: #a3312a; }
   .tasks-manage-delete-btn {
     background: transparent;
     border: none;
@@ -1365,6 +1431,74 @@
   #overdue-modal-close:hover { background: var(--land-default); color: var(--text); }
   #overdue-modal-body { padding: 6px 18px 18px; overflow-y: auto; }
 
+  #email-test-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  #email-test-modal-backdrop.hidden { display: none; }
+  #email-test-modal {
+    background: #ffffff;
+    border-radius: 12px;
+    width: 640px;
+    max-width: 92vw;
+    max-height: 82vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+  }
+  #email-test-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  #email-test-modal-header h3 { margin: 0; font-size: 15px; font-weight: 600; }
+  #email-test-modal-close {
+    background: transparent;
+    border: none;
+    font-size: 15px;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 4px;
+  }
+  #email-test-modal-close:hover { background: var(--land-default); color: var(--text); }
+  #email-test-modal-body { padding: 16px 18px 20px; overflow-y: auto; }
+  #email-test-picker-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  #email-test-picker-row label { font-size: 12.5px; color: var(--text-muted); font-weight: 500; }
+  #email-test-person-select {
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .email-preview-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 22px;
+    background: #fbfaf7;
+    font-size: 13.5px;
+    color: var(--text);
+  }
+  .email-preview-greeting { margin: 0 0 14px; }
+  .email-preview-section { margin-bottom: 16px; }
+  .email-preview-section:last-child { margin-bottom: 0; }
+  .email-preview-section h4 { margin: 0 0 8px; font-size: 13px; font-weight: 700; }
+  .email-preview-item { padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .email-preview-item:last-child { border-bottom: none; }
+  .email-preview-item-name { font-weight: 600; }
+  .email-preview-item-parent { color: var(--text-muted); font-size: 12px; margin-top: 2px; }
+  .email-preview-item-dates { color: var(--text-muted); font-size: 12px; margin-top: 2px; }
+  .email-preview-empty { color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px 0; }
+
   #goals-expand-modal-backdrop {
     position: fixed;
     inset: 0;
@@ -1936,6 +2070,10 @@
         <select id="tasks-general-filter">
           <option value="">Todos</option>
         </select>
+        <span id="tasks-manage-emails-wrap">
+          <button id="tasks-manage-emails-btn" type="button" title="Definir o email de cada responsável para o resumo diário por email">✉️ Emails dos responsáveis</button>
+        </span>
+        <button id="tasks-test-email-btn" type="button" title="Ver como ficaria o email diário de uma pessoa">🧪 Testar email</button>
       </div>
       <div id="tasks-general-stats"></div>
     </div>
@@ -2256,6 +2394,23 @@
   </div>
 </div>
 
+<div id="email-test-modal-backdrop" class="hidden">
+  <div id="email-test-modal">
+    <div id="email-test-modal-header">
+      <h3>🧪 Testar email diário</h3>
+      <button id="email-test-modal-close" type="button">✕</button>
+    </div>
+    <div id="email-test-modal-body">
+      <div id="email-test-picker-row">
+        <label for="email-test-person-select">Ver como ficaria para:</label>
+        <select id="email-test-person-select"></select>
+      </div>
+      <div id="email-test-preview"></div>
+    </div>
+  </div>
+</div>
+
+
 <div id="goals-expand-modal-backdrop" class="hidden">
   <div id="goals-expand-modal">
     <button id="goals-expand-modal-close" type="button">✕</button>
@@ -2433,7 +2588,7 @@ function applyAllData(data) {
   if (data.brazilStates) brazilStateData = data.brazilStates;
   if (data.goals) goalsData = data.goals.map(migrateGoalRecord);
   if (data.tasks) tasksData = data.tasks.map(t => ensureTaskDefaults(t));
-  if (data.assignees) assigneesList = data.assignees;
+  if (data.assignees) assigneesList = normalizeAssigneesList(data.assignees);
   if (data.social) socialData = data.social;
   if (data.socialBR) socialDataBR = data.socialBR;
   if (data.affiliations) affiliationsCountryData = data.affiliations;
@@ -3692,14 +3847,22 @@ const ASSIGNEES_STORAGE_KEY = "wpf_assignees_data";
 const ASSIGNEES_SEED = ["Karina Bupp", "Roberto Lifschitz", "Leonardo Cavarge", "Isabela Castro"];
 // Renames applied to any already-saved data using the old short first names.
 const ASSIGNEE_RENAMES = { "Leonardo": "Leonardo Cavarge", "Karina": "Karina Bupp" };
+// Assignees used to be stored as plain name strings. Now each one also
+// carries an email (used for the daily task-digest send), so every entry is
+// a {name, email} object — this upgrades any old string-shaped data (from
+// localStorage or an older cloud snapshot) to that shape on the fly.
+function normalizeAssigneesList(list) {
+  if (!Array.isArray(list)) return [];
+  return list.map(a => (typeof a === "string" ? { name: a, email: "" } : { name: a.name, email: a.email || "" }));
+}
 let assigneesList = [];
 try {
   const stored = JSON.parse(localStorage.getItem(ASSIGNEES_STORAGE_KEY) || "null");
-  assigneesList = (Array.isArray(stored) && stored.length) ? stored : [...ASSIGNEES_SEED];
+  assigneesList = (Array.isArray(stored) && stored.length) ? normalizeAssigneesList(stored) : ASSIGNEES_SEED.map(name => ({ name, email: "" }));
 } catch (e) {
-  assigneesList = [...ASSIGNEES_SEED];
+  assigneesList = ASSIGNEES_SEED.map(name => ({ name, email: "" }));
 }
-assigneesList = assigneesList.map(n => ASSIGNEE_RENAMES[n] || n);
+assigneesList.forEach(a => { if (ASSIGNEE_RENAMES[a.name]) a.name = ASSIGNEE_RENAMES[a.name]; });
 
 function saveAssigneesList() {
   localStorage.setItem(ASSIGNEES_STORAGE_KEY, JSON.stringify(assigneesList));
@@ -3709,11 +3872,18 @@ function saveAssigneesList() {
 function addAssigneeName(name) {
   const trimmed = name.trim();
   if (!trimmed) return null;
-  const existing = assigneesList.find(n => n.toLowerCase() === trimmed.toLowerCase());
-  if (existing) return existing;
-  assigneesList.push(trimmed);
+  const existing = assigneesList.find(a => a.name.toLowerCase() === trimmed.toLowerCase());
+  if (existing) return existing.name;
+  assigneesList.push({ name: trimmed, email: "" });
   saveAssigneesList();
   return trimmed;
+}
+
+function setAssigneeEmail(name, email) {
+  const a = assigneesList.find(a => a.name === name);
+  if (!a) return;
+  a.email = email.trim();
+  saveAssigneesList();
 }
 
 function walkAllTasks(list, fn) {
@@ -3740,19 +3910,27 @@ function removeAssigneeEverywhere(name) {
   saveTasksData();
 }
 
-// --- "Editar lista de responsáveis" popover (rename/delete shared names) ---
+// --- "Responsáveis" popover: rename/delete + set each person's email
+// (used to address their daily task-digest email). Shared between the
+// gear icon on the table header and the "Emails" button on the Geral tab —
+// whichever trigger is clicked, the popover node moves under it.
 let tasksManageAssigneesOpen = false;
+let tasksManageAssigneesAnchorBtn = null;
 
 function renderManageAssigneesPopover() {
   const pop = document.getElementById("tasks-manage-assignees-popover");
   pop.classList.toggle("show", tasksManageAssigneesOpen);
   if (!tasksManageAssigneesOpen) { pop.innerHTML = ""; return; }
+  const esc = (s) => (s || "").replace(/"/g, "&quot;");
   pop.innerHTML = `
     <div class="tasks-manage-title">Responsáveis</div>
-    ${assigneesList.length ? assigneesList.map(name => `
-      <div class="tasks-manage-row">
-        <input type="text" class="tasks-manage-name-input" data-old="${name.replace(/"/g, "&quot;")}" value="${name.replace(/"/g, "&quot;")}">
-        <button type="button" class="tasks-manage-delete-btn" data-name="${name.replace(/"/g, "&quot;")}" title="Excluir">🗑</button>
+    ${assigneesList.length ? assigneesList.map(a => `
+      <div class="tasks-manage-person">
+        <div class="tasks-manage-row">
+          <input type="text" class="tasks-manage-name-input" data-old="${esc(a.name)}" value="${esc(a.name)}">
+          <button type="button" class="tasks-manage-delete-btn" data-name="${esc(a.name)}" title="Excluir">🗑</button>
+        </div>
+        <input type="email" class="tasks-manage-email-input" data-name="${esc(a.name)}" value="${esc(a.email)}" placeholder="email@exemplo.com">
       </div>
     `).join("") : `<div class="tasks-manage-empty">Nenhum responsável ainda.</div>`}
   `;
@@ -3761,16 +3939,18 @@ function renderManageAssigneesPopover() {
       const oldName = input.dataset.old;
       const newName = input.value.trim();
       if (!newName || newName === oldName) { input.value = oldName; return; }
-      const dupe = assigneesList.find(n => n.toLowerCase() === newName.toLowerCase() && n !== oldName);
-      const idx = assigneesList.indexOf(oldName);
-      if (idx === -1) return;
+      const dupe = assigneesList.find(a => a.name.toLowerCase() === newName.toLowerCase() && a.name !== oldName);
+      const person = assigneesList.find(a => a.name === oldName);
+      if (!person) return;
       if (dupe) {
         // renaming onto an existing name — merge into it instead of
-        // creating a duplicate entry in the list.
-        assigneesList.splice(idx, 1);
-        renameAssigneeEverywhere(oldName, dupe);
+        // creating a duplicate entry in the list (keep the existing
+        // person's email unless it's blank and the renamed one had one).
+        if (!dupe.email && person.email) dupe.email = person.email;
+        assigneesList = assigneesList.filter(a => a.name !== oldName);
+        renameAssigneeEverywhere(oldName, dupe.name);
       } else {
-        assigneesList[idx] = newName;
+        person.name = newName;
         renameAssigneeEverywhere(oldName, newName);
       }
       saveAssigneesList();
@@ -3783,10 +3963,17 @@ function renderManageAssigneesPopover() {
     });
     input.addEventListener("blur", commitRename);
   });
+  pop.querySelectorAll(".tasks-manage-email-input").forEach(input => {
+    function commitEmail() { setAssigneeEmail(input.dataset.name, input.value); }
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") input.blur();
+    });
+    input.addEventListener("blur", commitEmail);
+  });
   pop.querySelectorAll(".tasks-manage-delete-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       const name = btn.dataset.name;
-      assigneesList = assigneesList.filter(n => n !== name);
+      assigneesList = assigneesList.filter(a => a.name !== name);
       saveAssigneesList();
       removeAssigneeEverywhere(name);
       renderManageAssigneesPopover();
@@ -3795,16 +3982,31 @@ function renderManageAssigneesPopover() {
   });
 }
 
+function toggleAssigneesManager(anchorWrapperEl, btnEl) {
+  const pop = document.getElementById("tasks-manage-assignees-popover");
+  if (tasksManageAssigneesOpen && tasksManageAssigneesAnchorBtn === btnEl) {
+    tasksManageAssigneesOpen = false;
+    renderManageAssigneesPopover();
+    return;
+  }
+  anchorWrapperEl.appendChild(pop);
+  tasksManageAssigneesAnchorBtn = btnEl;
+  tasksManageAssigneesOpen = true;
+  renderManageAssigneesPopover();
+}
+
 document.getElementById("tasks-manage-assignees-btn").addEventListener("click", (e) => {
   e.stopPropagation();
-  tasksManageAssigneesOpen = !tasksManageAssigneesOpen;
-  renderManageAssigneesPopover();
+  toggleAssigneesManager(e.currentTarget.closest(".tasks-col-assignee"), e.currentTarget);
+});
+document.getElementById("tasks-manage-emails-btn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  toggleAssigneesManager(document.getElementById("tasks-manage-emails-wrap"), e.currentTarget);
 });
 document.addEventListener("click", (e) => {
   if (!tasksManageAssigneesOpen) return;
   const pop = document.getElementById("tasks-manage-assignees-popover");
-  const btn = document.getElementById("tasks-manage-assignees-btn");
-  if (pop.contains(e.target) || btn.contains(e.target)) return;
+  if (pop.contains(e.target) || (tasksManageAssigneesAnchorBtn && tasksManageAssigneesAnchorBtn.contains(e.target))) return;
   tasksManageAssigneesOpen = false;
   renderManageAssigneesPopover();
 });
@@ -3822,10 +4024,10 @@ function assigneeCellMarkup(t) {
     return `<div class="tasks-assignee-chips">${fullChips}</div><input type="text" class="tasks-assignee-new-input" data-id="${t.id}" placeholder="Nome novo…" autofocus>`;
   }
   if (tasksAssigneePickerId === t.id) {
-    const available = assigneesList.filter(n => !t.assignees.includes(n));
+    const available = assigneesList.filter(a => !t.assignees.includes(a.name));
     return `<div class="tasks-assignee-chips">${fullChips}</div><select class="tasks-assignee-select" data-id="${t.id}">
       <option value="">Escolher…</option>
-      ${available.map(name => `<option value="${name}">${name}</option>`).join("")}
+      ${available.map(a => `<option value="${a.name}">${a.name}</option>`).join("")}
       <option value="__add_new__">+ Adicionar nome…</option>
     </select>`;
   }
@@ -3912,11 +4114,10 @@ function autoSyncLateStatuses() {
   let changed = false;
   function walk(items) {
     items.forEach(t => {
-      // Only auto-flip tasks nobody has touched yet (still at the default
-      // "Not Started") once their due date passes. Once a person picks any
-      // status themselves — In Progress, On Hold, Late, whatever — that's
-      // a deliberate choice and this sync must never silently overwrite it.
-      if (t.status === "Not Started" && t.endDate && t.endDate < today) {
+      // Flip any task that isn't finished/moot (Done/Cancelled) — and isn't
+      // already Late — to "Late" once its due date passes, no matter what
+      // status it was in (Not Started, In Progress, On Hold, etc).
+      if (t.status !== "Done" && t.status !== "Cancelled" && t.status !== "Late" && t.endDate && t.endDate < today) {
         t.status = "Late";
         changed = true;
       }
@@ -4052,15 +4253,19 @@ function renderTaskRow(t, depth) {
         ${isSub ? `<span class="tasks-drag-handle" data-id="${t.id}" draggable="true" title="Arrastar para mover">⠿</span>` : ""}
         <button class="tasks-toggle ${hasChildren ? "" : "empty"}" data-id="${t.id}" type="button">${expanded ? "▼" : "▶"}</button>
         <input class="tasks-name-input ${depth === 0 ? "tasks-name-top" : ""}" data-id="${t.id}" data-field="name" value="${t.name}">
+        <span class="tasks-fill-handle" data-id="${t.id}" data-field="name" title="Arraste para copiar o nome para as linhas ao lado"></span>
       </div>
       <div class="tasks-col-status">
         <select class="tasks-status-select" data-id="${t.id}" style="background:${colors.bg}; color:${colors.text}">${taskStatusOptionsMarkup(t.status)}</select>
+        <span class="tasks-fill-handle" data-id="${t.id}" data-field="status" title="Arraste para copiar o status para as linhas ao lado"></span>
       </div>
       <div class="tasks-col-date">
         <input type="date" class="tasks-date-input" data-id="${t.id}" data-field="startDate" value="${t.startDate}" title="Data de início">
+        <span class="tasks-fill-handle" data-id="${t.id}" data-field="startDate" title="Arraste para copiar a data para as linhas ao lado"></span>
       </div>
       <div class="tasks-col-date">
         <input type="date" class="tasks-date-input" data-id="${t.id}" data-field="endDate" value="${t.endDate}" title="Data final">
+        <span class="tasks-fill-handle" data-id="${t.id}" data-field="endDate" title="Arraste para copiar a data para as linhas ao lado"></span>
       </div>
       <div class="tasks-col-assignee">
         ${assigneeCellMarkup(t)}
@@ -4070,6 +4275,7 @@ function renderTaskRow(t, depth) {
           <option value="">${depth === 0 ? "— nenhum —" : "— herdar —"}</option>
           ${goalsData.map(g => `<option value="${g.id}" ${g.id === t.kpiLink ? "selected" : ""}>${g.name}</option>`).join("")}
         </select>
+        <span class="tasks-fill-handle" data-id="${t.id}" data-field="kpiLink" title="Arraste para copiar o KPI para as linhas ao lado"></span>
       </div>
       <div class="tasks-col-actions">
         <select class="tasks-type-select" data-id="${t.id}" title="Task ou subtask? Subtasks ganham a cor do status">
@@ -4364,8 +4570,85 @@ function renderTasksTable() {
       renderTasksTable();
     });
   });
+  wireFillHandles(body);
   updateTasksBulkBar();
 }
+
+// --- Fill handle: click a cell (name/status/dates/kpi) to select it, then
+// drag the little square at its corner up or down to copy that one value
+// onto every row the drag passes over — like a spreadsheet's autofill.
+let tasksFill = null; // { field, value, startIndex, ids } while a drag is in progress
+
+function tasksFlatRowIds() {
+  return [...document.querySelectorAll("#tasks-table-body .tasks-row")].map(el => el.dataset.id);
+}
+
+function tasksClearFillPreview() {
+  document.querySelectorAll(".tasks-fill-target").forEach(el => el.classList.remove("tasks-fill-target"));
+}
+
+// startDate and endDate both live inside a ".tasks-col-date" wrapper, so we
+// find the cell via the specific input rather than the class alone.
+function tasksFindFieldCell(rowEl, field) {
+  const input = rowEl.querySelector(`[data-field="${field}"]`);
+  return input ? input.closest(".tasks-row > div") : null;
+}
+
+function wireFillHandles(body) {
+  body.querySelectorAll(".tasks-fill-handle").forEach(handle => {
+    handle.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const ids = tasksFlatRowIds();
+      const startIndex = ids.indexOf(handle.dataset.id);
+      const t = findTaskById(tasksData, handle.dataset.id);
+      if (startIndex === -1 || !t) return;
+      tasksFill = { field: handle.dataset.field, value: t[handle.dataset.field], startIndex, ids };
+      handle.classList.add("dragging");
+      document.body.classList.add("tasks-fill-active");
+    });
+  });
+}
+
+document.addEventListener("mousemove", (e) => {
+  if (!tasksFill) return;
+  tasksClearFillPreview();
+  const rowEl = document.elementFromPoint(e.clientX, e.clientY)?.closest(".tasks-row");
+  if (!rowEl) return;
+  const targetIndex = tasksFill.ids.indexOf(rowEl.dataset.id);
+  if (targetIndex === -1) return;
+  const [from, to] = targetIndex > tasksFill.startIndex
+    ? [tasksFill.startIndex + 1, targetIndex]
+    : [targetIndex, tasksFill.startIndex - 1];
+  if (from > to) return;
+  const rows = [...document.querySelectorAll("#tasks-table-body .tasks-row")];
+  for (let i = from; i <= to; i++) {
+    const cell = tasksFindFieldCell(rows[i], tasksFill.field);
+    if (cell) cell.classList.add("tasks-fill-target");
+  }
+});
+
+document.addEventListener("mouseup", (e) => {
+  if (!tasksFill) return;
+  const { field, value, startIndex, ids } = tasksFill;
+  const rowEl = document.elementFromPoint(e.clientX, e.clientY)?.closest(".tasks-row");
+  tasksClearFillPreview();
+  document.querySelectorAll(".tasks-fill-handle.dragging").forEach(h => h.classList.remove("dragging"));
+  document.body.classList.remove("tasks-fill-active");
+  tasksFill = null;
+  if (!rowEl) return;
+  const targetIndex = ids.indexOf(rowEl.dataset.id);
+  if (targetIndex === -1 || targetIndex === startIndex) return;
+  const [from, to] = targetIndex > startIndex ? [startIndex + 1, targetIndex] : [targetIndex, startIndex - 1];
+  if (from > to) return;
+  for (let i = from; i <= to; i++) {
+    const t = findTaskById(tasksData, ids[i]);
+    if (t) t[field] = value;
+  }
+  saveTasksData();
+  renderTasksTable();
+  if (typeof renderGoalsGrid === "function") renderGoalsGrid();
+});
 
 // --- Bulk select / delete bar ---
 let tasksBulkConfirming = false;
@@ -4485,7 +4768,7 @@ function populateTasksGeneralFilter() {
   const sel = document.getElementById("tasks-general-filter");
   const current = sel.value;
   sel.innerHTML = `<option value="">Todos</option>` +
-    assigneesList.map(name => `<option value="${name}" ${name === current ? "selected" : ""}>${name}</option>`).join("");
+    assigneesList.map(a => `<option value="${a.name}" ${a.name === current ? "selected" : ""}>${a.name}</option>`).join("");
   sel.value = tasksGeneralFilter;
 }
 
@@ -4557,6 +4840,94 @@ function renderTasksGeneralStats() {
 document.getElementById("tasks-general-filter").addEventListener("change", (e) => {
   tasksGeneralFilter = e.target.value;
   renderTasksGeneralStats();
+});
+
+// --- "Testar email" preview: shows exactly what the daily digest email
+// would contain for a chosen person, so the wording/layout can be tuned
+// before relying on the Apps Script send. Mirrors that script's rule:
+// only subtasks (depth > 0) are listed as items — a top-level task that
+// just groups subtasks together shows up only as their "task mãe"
+// reference, never as its own line.
+const EMAIL_DIGEST_ORDER = ["Late", "Not Started", "In Progress"];
+const EMAIL_DIGEST_LABELS = { "Late": "Atrasadas", "Not Started": "Não iniciadas", "In Progress": "Em andamento" };
+
+function buildDigestForPerson(personName) {
+  const grouped = { "Late": [], "Not Started": [], "In Progress": [] };
+  function walk(items, parentName, depth) {
+    items.forEach(t => {
+      if (depth > 0 && grouped[t.status] && t.assignees.includes(personName)) {
+        grouped[t.status].push({ name: t.name, parent: parentName, startDate: t.startDate, endDate: t.endDate });
+      }
+      walk(t.subtasks, t.name, depth + 1);
+    });
+  }
+  walk(tasksData, null, 0);
+  return grouped;
+}
+
+function renderEmailPreview(personName) {
+  const previewEl = document.getElementById("email-test-preview");
+  if (!personName) { previewEl.innerHTML = `<div class="email-preview-empty">Cadastre pelo menos um responsável primeiro.</div>`; return; }
+  const person = assigneesList.find(a => a.name === personName);
+  const grouped = buildDigestForPerson(personName);
+  const total = EMAIL_DIGEST_ORDER.reduce((sum, s) => sum + grouped[s].length, 0);
+  const firstName = personName.split(" ")[0];
+  const today = formatEntryDate(todayISO());
+
+  let note = "";
+  if (person && !person.email) {
+    note = `<div class="email-preview-empty" style="color:#a3312a;padding:0 0 12px;text-align:left;">⚠️ Essa pessoa ainda não tem email cadastrado — o envio automático pularia ela.</div>`;
+  }
+
+  let html = note + `<div class="email-preview-card">`;
+  html += `<p class="email-preview-greeting">Oi ${firstName}, esse é o resumo das suas tasks no WPF Dashboard hoje (${today}):</p>`;
+
+  if (!total) {
+    html += `<div class="email-preview-empty">Nenhuma subtask atrasada, não iniciada ou em andamento pra essa pessoa hoje — o email diário não seria enviado (não manda email vazio).</div>`;
+  } else {
+    EMAIL_DIGEST_ORDER.forEach(status => {
+      const list = grouped[status];
+      if (!list.length) return;
+      const color = (TASK_STATUS_COLORS[status] || {}).text || "inherit";
+      html += `<div class="email-preview-section">
+        <h4 style="color:${color}">${EMAIL_DIGEST_LABELS[status]} (${list.length})</h4>
+        ${list.map(item => `
+          <div class="email-preview-item">
+            <div class="email-preview-item-name">${item.name}</div>
+            ${item.parent ? `<div class="email-preview-item-parent">↳ ${item.parent}</div>` : ""}
+            <div class="email-preview-item-dates">Início: ${item.startDate ? formatEntryDate(item.startDate) : "—"} · Vence: ${item.endDate ? formatEntryDate(item.endDate) : "—"}</div>
+          </div>
+        `).join("")}
+      </div>`;
+    });
+  }
+  html += `</div>`;
+  previewEl.innerHTML = html;
+}
+
+function populateEmailTestPicker() {
+  const sel = document.getElementById("email-test-person-select");
+  const current = sel.value;
+  sel.innerHTML = assigneesList.map(a => `<option value="${a.name}">${a.name}${a.email ? "" : " (sem email)"}</option>`).join("");
+  if (assigneesList.some(a => a.name === current)) sel.value = current;
+}
+
+function openEmailTestModal() {
+  populateEmailTestPicker();
+  const sel = document.getElementById("email-test-person-select");
+  renderEmailPreview(sel.value || null);
+  document.getElementById("email-test-modal-backdrop").classList.remove("hidden");
+}
+function closeEmailTestModal() {
+  document.getElementById("email-test-modal-backdrop").classList.add("hidden");
+}
+document.getElementById("tasks-test-email-btn").addEventListener("click", openEmailTestModal);
+document.getElementById("email-test-modal-close").addEventListener("click", closeEmailTestModal);
+document.getElementById("email-test-modal-backdrop").addEventListener("click", (e) => {
+  if (e.target.id === "email-test-modal-backdrop") closeEmailTestModal();
+});
+document.getElementById("email-test-person-select").addEventListener("change", (e) => {
+  renderEmailPreview(e.target.value);
 });
 
 function setTasksViewMode(mode) {
