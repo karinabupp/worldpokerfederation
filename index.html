@@ -128,9 +128,6 @@
     margin-left: 4px;
   }
   #goals-add-btn:hover { background: var(--land-default); }
-  #goals-arrow-legend { display: flex; align-items: center; gap: 14px; font-size: 11.5px; color: var(--text-muted); }
-  .goals-legend-item { display: flex; align-items: center; gap: 4px; }
-  .goals-legend-item svg { width: 13px; height: 13px; }
 
   #tasks-wrap { width: 100%; }
 
@@ -370,42 +367,6 @@
   }
   .tasks-subnav-btn[data-tooltip]:hover::after { opacity: 1; }
 
-  #marketing-subnav { display: flex; align-items: center; gap: 6px; }
-  .mkt-subnav-btn {
-    position: relative;
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    cursor: pointer;
-    color: var(--text-muted);
-  }
-  .mkt-subnav-btn svg { width: 17px; height: 17px; }
-  .mkt-subnav-btn:hover { background: var(--land-default); color: var(--text); }
-  .mkt-subnav-btn.active { background: var(--text); border-color: var(--text); color: #ffffff; }
-  .mkt-subnav-btn[data-tooltip]::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    top: 100%;
-    right: 0;
-    margin-top: 6px;
-    background: #2c2c2a;
-    color: #ffffff;
-    font-size: 11.5px;
-    font-weight: 500;
-    padding: 4px 8px;
-    border-radius: 5px;
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.12s ease;
-    z-index: 20;
-  }
-  .mkt-subnav-btn[data-tooltip]:hover::after { opacity: 1; }
   #tasks-footer { display: flex; align-items: center; justify-content: flex-end; margin-top: 14px; }
 
   #tasks-late-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -428,6 +389,8 @@
   #marketing-wrap { width: 100%; }
   #marketing-logo-row { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 24px; }
   #marketing-sync-status { font-size: 12px; color: var(--text-muted); }
+  #marketing-charts-row { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+  .mkt-chart-col { flex: 1 1 460px; max-width: 620px; }
   .mkt-section { margin-bottom: 30px; }
   .mkt-section-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
   .mkt-section-head h3 { margin: 0; font-size: 16px; font-weight: 600; }
@@ -469,7 +432,6 @@
   }
   .mkt-agg-btn:hover { background: var(--land-default); color: var(--text); }
   .mkt-agg-btn.active { background: var(--text); border-color: var(--text); color: #ffffff; }
-  .mkt-missing-note { font-size: 12px; color: #8a5a00; background: #fff4dd; border-radius: 8px; padding: 8px 12px; margin-top: 10px; }
 
   #tasks-general-filter-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
   #tasks-general-filter-row label { font-size: 12.5px; color: var(--text-muted); font-weight: 500; }
@@ -2227,7 +2189,6 @@
         <button class="goals-tab" data-cat="CBTH" type="button">CBTH <span class="goals-tab-count"></span></button>
         <button id="goals-add-btn" type="button">+ Novo KPI</button>
       </div>
-      <div id="goals-arrow-legend"></div>
     </div>
     <div id="goals-grid"></div>
   </div>
@@ -2237,81 +2198,21 @@
   <div id="marketing-wrap">
     <div id="marketing-logo-row">
       <span id="marketing-sync-status"></span>
-      <div id="marketing-subnav">
-        <button class="mkt-subnav-btn active" data-mkt="site" data-tooltip="Site" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
-          </svg>
-        </button>
-        <button class="mkt-subnav-btn" data-mkt="ads" data-tooltip="AdWords" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16" y2="16"/>
-          </svg>
-        </button>
-        <button class="mkt-subnav-btn" data-mkt="social" data-tooltip="Social Media" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
-          </svg>
-        </button>
-      </div>
     </div>
 
-    <div class="mkt-section" id="mkt-section-site">
-      <div class="mkt-section-head">
-        <h3>Site — Acessos</h3>
-        <span class="mkt-section-sub">Meta vs. atingido, por mês</span>
-      </div>
-      <div class="mkt-chart-card"><canvas id="chart-site-meta"></canvas></div>
-
-      <div class="mkt-section-head" style="margin-top:26px;">
-        <h3>Site — Acessos por categoria</h3>
-        <span class="mkt-section-sub">Origem do tráfego (GA4), últimos 12 meses</span>
-      </div>
-      <div class="mkt-chart-card"><canvas id="chart-site-category"></canvas></div>
-    </div>
-
-    <div class="mkt-section hidden" id="mkt-section-ads">
-      <div class="mkt-section-head">
-        <h3>AdWords — Acessos</h3>
-        <span class="mkt-section-sub">Realizado (Paid Search) vs. meta (Clicks Meta)</span>
-      </div>
-      <div class="mkt-chart-card"><canvas id="chart-ads-accesses"></canvas></div>
-
-      <div class="mkt-section-head" style="margin-top:26px;">
-        <h3>AdWords — CPC</h3>
-        <span class="mkt-section-sub">Meta mensal vs. atingido</span>
-      </div>
-      <div class="mkt-chart-card"><canvas id="chart-ads-cpc"></canvas></div>
-
-      <div class="mkt-section-head" style="margin-top:26px;">
-        <h3>AdWords — Budget</h3>
-        <span class="mkt-section-sub">Realizado por mês e total vs. meta</span>
-      </div>
-      <div class="mkt-chart-card"><canvas id="chart-ads-budget"></canvas></div>
-      <div id="mkt-ads-missing-note" class="mkt-missing-note hidden"></div>
-    </div>
-
-    <div class="mkt-section hidden" id="mkt-section-social">
-      <div class="mkt-section-head">
-        <h3>Social — Crescimento de Seguidores</h3>
-        <span class="mkt-section-sub">Aumento de seguidores (Instagram)</span>
-        <div class="mkt-agg-toggle" data-target="followers">
-          <button class="mkt-agg-btn" data-agg="weekly" type="button">Semanal</button>
-          <button class="mkt-agg-btn active" data-agg="monthly" type="button">Mensal</button>
+    <div id="marketing-charts-row">
+      <div class="mkt-chart-col">
+        <div class="mkt-section-head">
+          <h3>Social Media</h3>
+          <span class="mkt-section-sub">Progressão de seguidores (Instagram)</span>
+          <div class="mkt-agg-toggle" data-target="followers">
+            <button class="mkt-agg-btn" data-agg="daily" type="button">Dia</button>
+            <button class="mkt-agg-btn" data-agg="weekly" type="button">Semana</button>
+            <button class="mkt-agg-btn active" data-agg="monthly" type="button">Mês</button>
+          </div>
         </div>
+        <div class="mkt-chart-card"><canvas id="chart-social-followers"></canvas></div>
       </div>
-      <div class="mkt-chart-card"><canvas id="chart-social-followers"></canvas></div>
-
-      <div class="mkt-section-head" style="margin-top:26px;">
-        <h3>Social — Engajamento</h3>
-        <span class="mkt-section-sub">Reach, views e likes (Instagram)</span>
-        <div class="mkt-agg-toggle" data-target="engagement">
-          <button class="mkt-agg-btn active" data-agg="daily" type="button">Diário</button>
-          <button class="mkt-agg-btn" data-agg="weekly" type="button">Semanal</button>
-          <button class="mkt-agg-btn" data-agg="monthly" type="button">Mensal</button>
-        </div>
-      </div>
-      <div class="mkt-chart-card"><canvas id="chart-social-engagement"></canvas></div>
     </div>
   </div>
 </div>
@@ -2399,7 +2300,6 @@
     </div>
     <div id="settings-users-list"></div>
   </div>
-</div>
 </div>
 
 <div id="members-view" class="content-view hidden">
@@ -3797,6 +3697,10 @@ function migrateGoalRecord(g) {
   // (e.g. "members added" tracked monthly but shown as a running total).
   // Defaults to false so nothing existing changes how it displays.
   if (out.cumulative === undefined) out.cumulative = false;
+  // Which way is "good" for this KPI — most go up (more members, more
+  // revenue), but some are better going down (complaints, churn). Defaults
+  // to "up" so every existing KPI keeps behaving exactly as before.
+  if (out.direction === undefined) out.direction = "up";
   return out;
 }
 
@@ -3962,7 +3866,12 @@ function trendArrowMarkup(val, prevVal, g) {
     </svg>`;
   }
   const isUp = val > prevVal;
-  const color = isUp ? GOALS_COLORS.green : GOALS_COLORS.red;
+  // Which direction counts as "good" for this KPI — most want to go up
+  // (more members, more revenue), but some are better going down
+  // (complaints, churn). Set per-KPI in Goals > editar.
+  const wantsDown = g && g.direction === "down";
+  const isGood = wantsDown ? !isUp : isUp;
+  const color = isGood ? GOALS_COLORS.green : GOALS_COLORS.red;
   const [x1, y1, x2, y2] = isUp ? [3, 13, 13, 3] : [3, 3, 13, 13];
   const tipX = x2, tipY = y2;
   const headPath = isUp
@@ -3985,16 +3894,6 @@ function renderGoalsTabCounts() {
     btn.querySelector(".goals-tab-count").textContent = count;
     btn.classList.toggle("active", cat === goalsActiveCat);
   });
-}
-
-function renderGoalsLegend() {
-  const el = document.getElementById("goals-arrow-legend");
-  if (!el) return;
-  el.innerHTML = `
-    <span class="goals-legend-item">${trendArrowMarkup(1, 0)} Subiu</span>
-    <span class="goals-legend-item">${trendArrowMarkup(0, 1)} Desceu</span>
-    <span class="goals-legend-item">${trendArrowMarkup(1, 1)} Manteve</span>
-  `;
 }
 
 // If a goal was paused with an end date and that date has passed, clear the
@@ -4025,13 +3924,14 @@ function createNewGoal() {
     paused: false,
     pausedUntil: null,
     health: "Indo bem",
-    cumulative: false
+    cumulative: false,
+    direction: "up"
   });
   saveGoalsData();
   goalsActiveCat = "Geral";
   goalsEditingId = id;
   goalsEditRows = null;
-  goalsIsNewGoal = true; // lets colab set name/category/cumulative on this first edit only
+  goalsIsNewGoal = true; // lets colab set name/category/cumulative/direction on this first edit only
   renderGoalsTabCounts();
   renderGoalsGrid();
   if (typeof renderTasksTable === "function") renderTasksTable();
@@ -4220,6 +4120,14 @@ function goalsCardEditMarkup(g) {
         <div class="field-hint">Desligado: o card mostra o resultado do mês. Ligado: o card mostra a soma de todos os meses até agora.</div>
       </div>
       <div class="goals-edit-field">
+        <label>Esse KPI precisa...</label>
+        <select id="goals-edit-direction" ${locked ? "disabled" : ""}>
+          <option value="up" ${g.direction !== "down" ? "selected" : ""}>Subir (mais é melhor)</option>
+          <option value="down" ${g.direction === "down" ? "selected" : ""}>Descer (menos é melhor)</option>
+        </select>
+        <div class="field-hint">Define a cor das setinhas: a direção que ajuda fica verde, a outra fica vermelha.</div>
+      </div>
+      <div class="goals-edit-field">
         <label>Pausar até (opcional)</label>
         <input type="date" id="goals-edit-pause-until" value="${g.pausedUntil || ""}" ${locked ? "disabled" : ""}>
       </div>
@@ -4391,7 +4299,6 @@ window.addEventListener("resize", () => {
 
 function renderGoalsGrid() {
   clearExpiredPauses();
-  renderGoalsLegend();
 
   const items = goalsActiveCat === "Geral" ? goalsData : goalsData.filter(g => g.cat === goalsActiveCat);
   goalsGridEl.innerHTML = items.map(g => `
@@ -4524,11 +4431,13 @@ function renderGoalsGrid() {
       const newCat = document.getElementById("goals-edit-cat").value;
       const newHealth = document.getElementById("goals-edit-health").value;
       const cumulative = document.getElementById("goals-edit-cumulative").checked;
+      const direction = document.getElementById("goals-edit-direction").value;
       const pauseUntil = document.getElementById("goals-edit-pause-until").value;
       g.name = newName || g.name;
       g.cat = newCat || g.cat;
       g.health = newHealth || g.health;
       g.cumulative = cumulative;
+      g.direction = direction === "down" ? "down" : "up";
       if (pauseUntil) {
         g.paused = true;
         g.pausedUntil = pauseUntil;
@@ -8218,10 +8127,9 @@ importFile.addEventListener("change", () => {
 // ═══════════════════════════════════════════════════════════
 const MKT_SHEET_ID = "1zRHJuj1-aP_KzuK0f7WVDhog3fKve2uXaRJ5JuLC-jE";
 const MKT_GIDS = {
-  siteMetas: "1597253817",        // Site - Metas: Mes, Meta
-  siteAnalytics: "1757891384",    // Site - Analytics GA4: Mes (YYYY-MM), Total + categorias
-  adsMetas: "1698485948",         // Ads - Google Ads Metas: Mes (Mmm/AAAA), Spend/CPC/Clicks Meta
   igHistorico: "25906588"         // Social - Instagram Historico: Data (diário), Seguidores, Reach, Views, Likes...
+  // Site/Ads GIDs removed along with those charts — re-add here if they come back:
+  // siteMetas: "1597253817", siteAnalytics: "1757891384", adsMetas: "1698485948"
 };
 const MKT_SNAPSHOT_KEY = "wpf_marketing_snapshot_v2";
 
@@ -8304,141 +8212,13 @@ function mktParseNum(v) {
   return isNaN(n) ? null : n;
 }
 
-const MKT_PT_MONTHS = { "Jan": 0, "Fev": 1, "Mar": 2, "Abr": 3, "Mai": 4, "Jun": 5, "Jul": 6, "Ago": 7, "Set": 8, "Out": 9, "Nov": 10, "Dez": 11 };
 const MKT_PT_MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-
-function mktParseMesSlashYear(s) {
-  const [monAbbr, yearStr] = (s || "").split("/");
-  const idx = MKT_PT_MONTHS[monAbbr];
-  const year = parseInt(yearStr, 10);
-  if (idx === undefined || isNaN(year)) return null;
-  return { idx, year };
-}
 
 function mktFormatMonthLabel(ym) {
   const [y, m] = (ym || "").split("-");
   const idx = parseInt(m, 10) - 1;
   if (isNaN(idx) || !MKT_PT_MONTH_LABELS[idx]) return ym;
   return `${MKT_PT_MONTH_LABELS[idx]}/${(y || "").slice(2)}`;
-}
-
-// ── Chart builders (pure data shaping, no DOM) ──────────────────────────
-
-function mktBuildSiteChart(metasRows, analyticsRows) {
-  const metaByMonth = {};
-  metasRows.forEach(r => {
-    const idx = MKT_PT_MONTHS[r.Mes];
-    if (idx !== undefined) metaByMonth[idx] = mktParseNum(r.Meta);
-  });
-  let maxYear = 0;
-  analyticsRows.forEach(r => {
-    const y = parseInt((r.Mes || "").split("-")[0], 10);
-    if (!isNaN(y) && y > maxYear) maxYear = y;
-  });
-  const realizedByMonth = {};
-  analyticsRows.forEach(r => {
-    const [y, m] = (r.Mes || "").split("-");
-    if (parseInt(y, 10) === maxYear) realizedByMonth[parseInt(m, 10) - 1] = mktParseNum(r.Total);
-  });
-  const labels = MKT_PT_MONTH_LABELS;
-  return {
-    labels,
-    metaData: labels.map((_, i) => metaByMonth[i] ?? null),
-    realData: labels.map((_, i) => realizedByMonth[i] ?? null),
-    year: maxYear
-  };
-}
-
-const MKT_CATEGORY_COLORS = {
-  "AI Assistant": "#9c9a92",
-  "Cross-network": "#c77dff",
-  "Direct": "#4c6ef5",
-  "Email": "#f59f00",
-  "Organic Search": "#2f9e44",
-  "Organic Social": "#e64980",
-  "Organic Video": "#15aabf",
-  "Paid Search": "#e8590c",
-  "Paid Social": "#7048e8",
-  "Referral": "#495057",
-  "Unassigned": "#adb5bd"
-};
-
-function mktBuildCategoryChart(analyticsRows) {
-  const rows = analyticsRows.slice(-12);
-  const labels = rows.map(r => mktFormatMonthLabel(r.Mes));
-  const datasets = Object.keys(MKT_CATEGORY_COLORS)
-    .filter(key => rows.some(r => (mktParseNum(r[key]) || 0) > 0))
-    .map(key => ({
-      label: key,
-      data: rows.map(r => mktParseNum(r[key]) || 0),
-      backgroundColor: MKT_CATEGORY_COLORS[key],
-      stack: "acessos"
-    }));
-  return { labels, datasets };
-}
-
-function mktBuildAdsAccessesChart(analyticsRows, adsMetasRows) {
-  const metaByKey = {};
-  adsMetasRows.forEach(r => {
-    const parsed = mktParseMesSlashYear(r.Mes);
-    if (!parsed) return;
-    metaByKey[`${parsed.year}-${parsed.idx}`] = mktParseNum(r["Clicks Meta"]);
-  });
-  const rows = analyticsRows.slice(-12);
-  const labels = rows.map(r => mktFormatMonthLabel(r.Mes));
-  const metaData = rows.map(r => {
-    const [y, m] = (r.Mes || "").split("-");
-    return metaByKey[`${parseInt(y, 10)}-${parseInt(m, 10) - 1}`] ?? null;
-  });
-  const realData = rows.map(r => mktParseNum(r["Paid Search"]) || 0);
-  return { labels, metaData, realData };
-}
-
-function mktBuildAdsCpcMeta(adsMetasRows) {
-  return {
-    labels: adsMetasRows.map(r => r.Mes),
-    metaData: adsMetasRows.map(r => mktParseNum(r["CPC Meta (USD)"]))
-  };
-}
-
-function mktBuildAdsBudgetMeta(adsMetasRows) {
-  return {
-    labels: adsMetasRows.map(r => r.Mes),
-    metaData: adsMetasRows.map(r => mktParseNum(r["Spend Meta (USD)"]))
-  };
-}
-
-// Followers is a running total (aggregate = last value of the period);
-// reach/views/likes are daily flow metrics (aggregate = sum over the period).
-function mktAggregateSeries(rows, dateKey, valueKeys, mode, aggType) {
-  const sorted = rows.slice().sort((a, b) => (a[dateKey] < b[dateKey] ? -1 : 1));
-  if (mode === "daily") {
-    return {
-      labels: sorted.map(r => r[dateKey]),
-      series: valueKeys.map(k => sorted.map(r => mktParseNum(r[k]) || 0))
-    };
-  }
-  const buckets = new Map();
-  sorted.forEach(r => {
-    let key;
-    if (mode === "weekly") {
-      const d = new Date(r[dateKey] + "T00:00:00");
-      const dow = (d.getDay() + 6) % 7; // Monday = 0
-      d.setDate(d.getDate() - dow);
-      key = d.toISOString().slice(0, 10);
-    } else {
-      key = (r[dateKey] || "").slice(0, 7);
-    }
-    if (!buckets.has(key)) buckets.set(key, []);
-    buckets.get(key).push(r);
-  });
-  const labels = Array.from(buckets.keys());
-  const series = valueKeys.map(k => labels.map(key => {
-    const items = buckets.get(key);
-    if (aggType === "last") return mktParseNum(items[items.length - 1][k]) || 0;
-    return items.reduce((sum, r) => sum + (mktParseNum(r[k]) || 0), 0);
-  }));
-  return { labels, series };
 }
 
 // ── Rendering ────────────────────────────────────────────────────────────
@@ -8460,17 +8240,7 @@ function mktBarOptions(extra) {
   }, extra || {});
 }
 
-function mktStackedBarOptions() {
-  return {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { position: "bottom" } },
-    scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
-  };
-}
-
 let mktData = null;
-let mktSocialAgg = { followers: "monthly", engagement: "daily" };
 
 function mktSetStatus(state) {
   const el = document.getElementById("marketing-sync-status");
@@ -8506,151 +8276,86 @@ function mktCardNote(canvasId, message) {
   }
 }
 
-function renderSiteCharts() {
-  const siteMetas = mktData.siteMetas || [];
-  const siteAnalytics = mktData.siteAnalytics || [];
-
-  if (!siteMetas.length && !siteAnalytics.length) {
-    mktCardNote("chart-site-meta", "Sem dados — não consegui carregar \"Site - Metas\" nem \"Site - Analytics GA4\".");
-    mktCardNote("chart-site-category", "Sem dados — não consegui carregar \"Site - Analytics GA4\".");
-    return;
+// Followers is a running total (aggregate = last value of the period);
+// flow metrics like reach/views would aggregate = sum over the period.
+function mktAggregateSeries(rows, dateKey, valueKeys, mode, aggType) {
+  const sorted = rows.slice().sort((a, b) => (a[dateKey] < b[dateKey] ? -1 : 1));
+  if (mode === "daily") {
+    return {
+      labels: sorted.map(r => r[dateKey]),
+      series: valueKeys.map(k => sorted.map(r => mktParseNum(r[k]) || 0))
+    };
   }
-  mktCardNote("chart-site-meta", null);
-  mktCardNote("chart-site-category", null);
-
-  const site = mktBuildSiteChart(siteMetas, siteAnalytics);
-  mktChart("chart-site-meta", {
-    type: "bar",
-    data: {
-      labels: site.labels,
-      datasets: [
-        { label: "Meta", data: site.metaData, backgroundColor: "#d8d5c9" },
-        { label: `Atingido (${site.year})`, data: site.realData, backgroundColor: "#2f6f4f" }
-      ]
-    },
-    options: mktBarOptions()
+  const buckets = new Map();
+  sorted.forEach(r => {
+    let key;
+    if (mode === "weekly") {
+      const d = new Date(r[dateKey] + "T00:00:00");
+      const dow = (d.getDay() + 6) % 7; // Monday = 0
+      d.setDate(d.getDate() - dow);
+      key = d.toISOString().slice(0, 10);
+    } else {
+      key = (r[dateKey] || "").slice(0, 7);
+    }
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(r);
   });
-
-  const cat = mktBuildCategoryChart(siteAnalytics);
-  if (!cat.datasets.length) {
-    mktCardNote("chart-site-category", "Sem dados de categoria retornados pela planilha.");
-  } else {
-    mktChart("chart-site-category", {
-      type: "bar",
-      data: { labels: cat.labels, datasets: cat.datasets },
-      options: mktStackedBarOptions()
-    });
-  }
+  const labels = Array.from(buckets.keys());
+  const series = valueKeys.map(k => labels.map(key => {
+    const items = buckets.get(key);
+    if (aggType === "last") return mktParseNum(items[items.length - 1][k]) || 0;
+    return items.reduce((sum, r) => sum + (mktParseNum(r[k]) || 0), 0);
+  }));
+  return { labels, series };
 }
 
-function renderAdsCharts() {
-  const siteAnalytics = mktData.siteAnalytics || [];
-  const adsMetas = mktData.adsMetas || [];
+// ── Follower-progression chart (Social Media) ─────────────────────────
 
-  if (!siteAnalytics.length && !adsMetas.length) {
-    ["chart-ads-accesses", "chart-ads-cpc", "chart-ads-budget"].forEach(id =>
-      mktCardNote(id, "Sem dados — não consegui carregar as abas do Google Ads.")
-    );
-    return;
-  }
-  ["chart-ads-accesses", "chart-ads-cpc", "chart-ads-budget"].forEach(id => mktCardNote(id, null));
+let mktFollowersAgg = "monthly";
 
-  const acc = mktBuildAdsAccessesChart(siteAnalytics, adsMetas);
-  mktChart("chart-ads-accesses", {
-    type: "bar",
-    data: {
-      labels: acc.labels,
-      datasets: [
-        { label: "Meta (Clicks Meta)", data: acc.metaData, backgroundColor: "#d8d5c9" },
-        { label: "Realizado (Paid Search)", data: acc.realData, backgroundColor: "#1f6feb" }
-      ]
-    },
-    options: mktBarOptions()
-  });
-
-  const cpc = mktBuildAdsCpcMeta(adsMetas);
-  mktChart("chart-ads-cpc", {
-    type: "line",
-    data: {
-      labels: cpc.labels,
-      datasets: [
-        { label: "CPC Meta (USD)", data: cpc.metaData, borderColor: "#e8590c", backgroundColor: "#e8590c", tension: 0.25 }
-      ]
-    },
-    options: mktBarOptions()
-  });
-
-  const budget = mktBuildAdsBudgetMeta(adsMetas);
-  mktChart("chart-ads-budget", {
-    type: "bar",
-    data: {
-      labels: budget.labels,
-      datasets: [
-        { label: "Spend Meta (USD)", data: budget.metaData, backgroundColor: "#d8d5c9" }
-      ]
-    },
-    options: mktBarOptions()
-  });
-
-  const noteEl = document.getElementById("mkt-ads-missing-note");
-  if (noteEl) {
-    noteEl.textContent = "CPC e Budget mostram só a meta por enquanto — falta o link da aba com os dados realizados do Google Ads (\"Ads - Google Ads\") pra completar o comparativo com o atingido.";
-    noteEl.classList.remove("hidden");
-  }
-}
-
-function renderSocialCharts() {
-  const rows = mktData.igHistorico || [];
+function renderFollowersChart() {
+  const rows = (mktData && mktData.igHistorico) || [];
   if (!rows.length) {
     mktCardNote("chart-social-followers", "Sem dados — não consegui carregar \"Social - Instagram Historico\".");
-    mktCardNote("chart-social-engagement", "Sem dados — não consegui carregar \"Social - Instagram Historico\".");
     return;
   }
   mktCardNote("chart-social-followers", null);
-  mktCardNote("chart-social-engagement", null);
 
-  // "Saldo" is the sheet's daily net follower change (follows - unfollows) —
-  // summing it per period is exactly "increase in followers", instead of
-  // just snapshotting the running total at period end.
-  const fAgg = mktAggregateSeries(rows, "Data", ["Saldo"], mktSocialAgg.followers, "sum");
-  const fColors = fAgg.series[0].map(v => v >= 0 ? "#2f9e44" : "#e24b4a");
+  // Seguidores is a running total (snapshot), so weekly/monthly aggregation
+  // takes the last value recorded in that period — not a sum.
+  const agg = mktAggregateSeries(rows, "Data", ["Seguidores"], mktFollowersAgg, "last");
+  const labels = mktFollowersAgg === "monthly" ? agg.labels.map(mktFormatMonthLabel) : agg.labels;
+
   mktChart("chart-social-followers", {
-    type: "bar",
-    data: {
-      labels: fAgg.labels,
-      datasets: [{ label: "Novos seguidores", data: fAgg.series[0], backgroundColor: fColors }]
-    },
-    options: mktBarOptions()
-  });
-
-  const eAgg = mktAggregateSeries(rows, "Data", ["Reach", "Views", "Likes"], mktSocialAgg.engagement, "sum");
-  mktChart("chart-social-engagement", {
     type: "line",
     data: {
-      labels: eAgg.labels,
-      datasets: [
-        { label: "Reach", data: eAgg.series[0], borderColor: "#e8590c", backgroundColor: "#e8590c", tension: 0.25, pointRadius: 0 },
-        { label: "Views", data: eAgg.series[1], borderColor: "#1f6feb", backgroundColor: "#1f6feb", tension: 0.25, pointRadius: 0 },
-        { label: "Likes", data: eAgg.series[2], borderColor: "#2f9e44", backgroundColor: "#2f9e44", tension: 0.25, pointRadius: 0 }
-      ]
+      labels,
+      datasets: [{
+        label: "Seguidores",
+        data: agg.series[0],
+        borderColor: "#7048e8",
+        backgroundColor: "#7048e8",
+        tension: 0.3,
+        pointRadius: mktFollowersAgg === "daily" ? 0 : 3,
+        fill: false
+      }]
     },
-    options: mktBarOptions()
+    options: mktBarOptions({ scales: { y: { beginAtZero: false } } })
   });
 }
 
 function renderMarketingCharts() {
   if (!mktData) return;
-  renderSiteCharts();
-  renderAdsCharts();
-  renderSocialCharts();
+  renderFollowersChart();
 }
+
 
 async function loadMarketingData() {
   mktSetStatus("loading");
   let cached = null;
   try { cached = JSON.parse(localStorage.getItem(MKT_SNAPSHOT_KEY) || "null"); } catch (e) { cached = null; }
 
-  const keys = ["siteMetas", "siteAnalytics", "adsMetas", "igHistorico"];
+  const keys = ["igHistorico"];
   const results = await Promise.allSettled(keys.map(k => mktFetchSheet(MKT_GIDS[k])));
 
   const next = Object.assign({}, mktData || cached || {});
@@ -8679,25 +8384,12 @@ marketingLogoClone.style.width = "auto";
 marketingLogoClone.style.display = "block";
 marketingLogoRow.prepend(marketingLogoClone);
 
-function setMktView(which) {
-  ["site", "ads", "social"].forEach(s => {
-    document.getElementById(`mkt-section-${s}`).classList.toggle("hidden", s !== which);
-  });
-  document.querySelectorAll(".mkt-subnav-btn").forEach(btn => {
-    btn.classList.toggle("active", btn.dataset.mkt === which);
-  });
-}
-document.querySelectorAll(".mkt-subnav-btn").forEach(btn => {
-  btn.addEventListener("click", () => setMktView(btn.dataset.mkt));
-});
-
 document.querySelectorAll(".mkt-agg-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     const group = btn.closest(".mkt-agg-toggle");
-    const target = group.dataset.target;
-    mktSocialAgg[target] = btn.dataset.agg;
+    mktFollowersAgg = btn.dataset.agg;
     group.querySelectorAll(".mkt-agg-btn").forEach(b => b.classList.toggle("active", b === btn));
-    renderSocialCharts();
+    renderFollowersChart();
   });
 });
 
