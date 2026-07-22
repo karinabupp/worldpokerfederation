@@ -182,7 +182,7 @@
 
 
 
-  #settings-wrap { width: 100%; max-width: 860px; }
+  #settings-wrap { width: 100%; }
   #settings-title { font-size: 19px; font-weight: 700; margin: 6px 0 8px; }
   #settings-subtitle { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin: 0 0 22px; max-width: 640px; }
   #settings-add-row { display: flex; gap: 8px; margin-bottom: 22px; flex-wrap: wrap; }
@@ -332,6 +332,7 @@
   .settings-perm-label { font-size: 13px; color: var(--text); cursor: pointer; }
 
   #tasks-logo-row { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 20px; }
+  #settings-logo-row { display: flex; align-items: center; width: 100%; margin-bottom: 22px; }
   #tasks-subnav { display: flex; align-items: center; gap: 6px; }
   .tasks-subnav-btn {
     position: relative;
@@ -480,8 +481,7 @@
     cursor: pointer;
     text-decoration: underline;
     padding: 6px 4px;
-    margin-top: 16px;
-    display: inline-block;
+    align-self: center;
   }
   #tasks-test-email-btn:hover { color: var(--accent); }
   #tasks-general-filter {
@@ -1073,7 +1073,7 @@
     cursor: pointer;
   }
 
-  #logo { height: 44px; width: auto; display: block; }
+  #logo { height: 44px; width: auto; display: block; margin-bottom: 20px; }
   #header-row {
     display: flex;
     align-items: center;
@@ -2387,13 +2387,6 @@
 <div id="settings-view" class="content-view hidden">
   <div id="settings-wrap">
     <div id="settings-logo-row"></div>
-    <h2 id="settings-title">Usuários e níveis de acesso</h2>
-    <p id="settings-subtitle">
-      <strong>Adm</strong> tem acesso completo à dash e nunca vê essa aba se estiver logado como colab.
-      <strong>Colab</strong> nunca vê Settings — o que cada colaborador pode ou não fazer é definido
-      individualmente, clicando em "Permissões" na linha da pessoa. O email de cada um é o mesmo usado
-      no resumo diário de tasks — os "responsáveis" que aparecem em Tasks são esses usuários.
-    </p>
     <div id="settings-add-row">
       <input type="text" id="settings-new-username" placeholder="Usuário (ex: joao)">
       <input type="text" id="settings-new-password" placeholder="Senha provisória">
@@ -2402,9 +2395,9 @@
         <option value="adm">Adm</option>
       </select>
       <button id="settings-add-user-btn" type="button">+ Criar usuário</button>
+      <button id="tasks-test-email-btn" type="button" title="Ver como ficaria o email diário de uma pessoa">🧪 Testar email</button>
     </div>
     <div id="settings-users-list"></div>
-    <button id="tasks-test-email-btn" type="button" title="Ver como ficaria o email diário de uma pessoa">🧪 Testar email</button>
   </div>
 </div>
 </div>
@@ -4699,6 +4692,42 @@ function saveTasksData() {
   scheduleCloudSave();
 }
 
+// Responsáveis = usuários now, but tasks from before that change may still
+// carry assignee names that were typed in under the old system and never
+// became a login account. Rather than silently orphan them (or lose them
+// from the assignee picker), each one gets turned into a real colab user
+// automatically — same as if Adm had created it by hand, provisional
+// password and all. Runs after both tasksData and usersList are loaded,
+// and again once cloud data lands, since either can introduce new names.
+function migrateOrphanAssigneesToUsers() {
+  const known = new Set(usersList.map(u => u.username.toLowerCase()));
+  const found = new Set();
+  function walk(items) {
+    items.forEach(t => {
+      (t.assignees || []).forEach(name => {
+        if (name && !known.has(name.toLowerCase())) found.add(name);
+      });
+      walk(t.subtasks);
+    });
+  }
+  walk(tasksData);
+  if (!found.size) return;
+  found.forEach(name => {
+    usersList.push({
+      username: name,
+      password: "wpf2026",
+      role: "colab",
+      email: "",
+      permissions: { ...COLAB_PERMISSIONS_DEFAULT },
+      mustChangePassword: true
+    });
+    known.add(name.toLowerCase());
+  });
+  saveUsersList();
+  if (typeof renderSettingsUsersList === "function") renderSettingsUsersList();
+}
+migrateOrphanAssigneesToUsers();
+
 // Any task past its end date automatically flips to "Late" — regardless of
 // whatever status it was in before — except Done/Cancelled, which are
 // treated as finished/moot and are left alone. Runs before every render so
@@ -5620,6 +5649,14 @@ tasksLogoClone.style.width = "auto";
 tasksLogoClone.style.display = "block";
 tasksLogoRow.prepend(tasksLogoClone);
 
+const settingsLogoRow = document.getElementById("settings-logo-row");
+const settingsLogoClone = document.getElementById("logo").cloneNode(true);
+settingsLogoClone.removeAttribute("id");
+settingsLogoClone.style.height = "44px";
+settingsLogoClone.style.width = "auto";
+settingsLogoClone.style.display = "block";
+settingsLogoRow.prepend(settingsLogoClone);
+
 renderTasksTable();
 
 renderGoalsTabCounts();
@@ -6188,6 +6225,7 @@ Promise.all([
   loadFromCloud()
 ]).then(([world]) => {
   checkDigestLinkParam();
+  migrateOrphanAssigneesToUsers();
   allCountries = topojson.feature(world, world.objects.countries).features;
   // world-atlas's admin-0 country set (like Natural Earth) folds Hong Kong and
   // Macau into China and doesn't give them their own polygons, unlike Taiwan
@@ -6500,7 +6538,6 @@ function renderCommitteeLegend() {
     names: namesByStatus[status],
     icon: null
   }));
-  rows.push({ key: "__star_closed__", label: "Star Events", color: COMMITTEE_STATUS_COLORS["Closed"].fill, count: starEventsTotal, names: starClosedNames, icon: "star" });
 
   legendRows.innerHTML = legendRowsMarkup(rows, total) + `<div class="legend-total-row">
     <span>Total Closed</span>
@@ -6616,6 +6653,9 @@ function setAffiliationsMode(showAffiliations) {
   fedsocLabelRightMembers.classList.toggle("active", showAffiliations);
   legendExpandedKey = null;
   legendExpandedSubKey = null;
+  // Switching to Affiliations stays inside Committee — the nav-rail icon
+  // must keep showing that, never fall back to unmarked/Members.
+  document.querySelectorAll(".nav-icon-btn").forEach(btn => btn.classList.toggle("active", btn.id === "nav-committee"));
   populatePanelStatusOptions();
   refreshMapColors();
   if (activeCountry && activeFeature) {
@@ -7079,7 +7119,6 @@ function renderCommitteeStateLegend(country, features) {
     names: namesByStatus[status],
     icon: null
   }));
-  rows.push({ key: "__star_closed__", label: "Closed with Star", color: COMMITTEE_STATUS_COLORS["Closed"].fill, count: starClosedCount, names: starClosedNames, icon: "star" });
 
   renderExpandableLegendRows(stateLegendRowsEl, rows, total, "estados", name => {
     const feature = currentStateFeatures.find(f => f.properties.name === name);
