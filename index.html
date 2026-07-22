@@ -234,6 +234,17 @@
     min-width: 90px;
   }
   .settings-user-name-input:focus { border-color: var(--border-strong); background: var(--bg); outline: none; }
+  .settings-user-login-input {
+    border: 1px solid var(--border);
+    background: var(--bg);
+    font-size: 12.5px;
+    color: var(--text);
+    padding: 5px 8px;
+    border-radius: 5px;
+    flex: 1 1 130px;
+    min-width: 100px;
+  }
+  .settings-user-login-input:focus { background: #ffffff; border-color: var(--border-strong); outline: none; }
   .settings-user-email-input {
     border: 1px solid var(--border);
     background: var(--bg);
@@ -386,23 +397,24 @@
   .tasks-late-info .tasks-late-meta { font-size: 12px; color: #791f1f; margin-top: 3px; }
   .tasks-late-empty { grid-column: 1 / -1; text-align: center; color: var(--text-muted); font-size: 13px; padding: 40px 0; }
 
-  #marketing-wrap { width: 100%; }
-  #marketing-logo-row { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 24px; }
+  #marketing-wrap { width: 100%; height: calc(100vh - 40px); display: flex; flex-direction: column; }
+  #marketing-logo-row { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 14px; flex: 0 0 auto; }
   #marketing-sync-status { font-size: 12px; color: var(--text-muted); }
-  #marketing-charts-row { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
-  #marketing-charts-row-2 { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; margin-top: 20px; }
-  .mkt-chart-col { flex: 1 1 460px; max-width: 620px; }
+  #marketing-charts-row { display: flex; gap: 16px; align-items: stretch; flex: 1 1 0; min-height: 0; }
+  #marketing-charts-row-2 { display: flex; gap: 16px; align-items: stretch; flex: 1 1 0; min-height: 0; margin-top: 14px; }
+  .mkt-chart-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
   .mkt-section { margin-bottom: 30px; }
-  .mkt-section-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
-  .mkt-section-head h3 { margin: 0; font-size: 16px; font-weight: 600; }
-  .mkt-section-sub { font-size: 12.5px; color: var(--text-muted); margin-right: auto; }
+  .mkt-section-head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; flex: 0 0 auto; }
+  .mkt-section-head h3 { margin: 0; font-size: 15px; font-weight: 600; }
+  .mkt-section-sub { font-size: 12px; color: var(--text-muted); margin-right: auto; }
   .mkt-chart-card {
     position: relative;
     background: #ffffff;
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 22px;
-    height: min(68vh, 640px);
+    padding: 16px;
+    flex: 1 1 0;
+    min-height: 0;
   }
   .mkt-card-empty-note {
     position: absolute;
@@ -2240,7 +2252,7 @@
       <div class="mkt-chart-col">
         <div class="mkt-section-head">
           <h3>Campanhas de AdWords</h3>
-          <span class="mkt-section-sub">Acessos ao site (cliques), por mês</span>
+          <span class="mkt-section-sub">Acessos ao site (cliques) — mês vs. acumulado</span>
         </div>
         <div class="mkt-chart-card"><canvas id="chart-ads-clicks"></canvas></div>
       </div>
@@ -2248,7 +2260,7 @@
       <div class="mkt-chart-col">
         <div class="mkt-section-head">
           <h3>Budget AdWords</h3>
-          <span class="mkt-section-sub">Uso do budget (spend), por mês</span>
+          <span class="mkt-section-sub">Uso do budget (spend) — mês vs. acumulado</span>
         </div>
         <div class="mkt-chart-card"><canvas id="chart-ads-budget"></canvas></div>
       </div>
@@ -2336,7 +2348,7 @@
   <div id="settings-wrap">
     <div id="settings-logo-row"></div>
     <div id="settings-add-row">
-      <input type="text" id="settings-new-username" placeholder="Usuário (ex: joao)">
+      <input type="text" id="settings-new-username" placeholder="Usuário/login (ex: joao)">
       <input type="text" id="settings-new-password" placeholder="Senha provisória">
       <select id="settings-new-role">
         <option value="colab">Colab</option>
@@ -2985,6 +2997,7 @@ const COLAB_PERMISSIONS_DEFAULT = {
 function ensureUserDefaults(u) {
   return {
     ...u,
+    login: u.login || u.username,
     email: u.email || "",
     permissions: { ...COLAB_PERMISSIONS_DEFAULT, ...(u.permissions || {}) },
     mustChangePassword: !!u.mustChangePassword
@@ -3075,9 +3088,9 @@ function hideLoginGate() {
 let pendingPasswordChangeUsername = null;
 
 function attemptLogin() {
-  const username = document.getElementById("login-gate-username").value.trim();
+  const login = document.getElementById("login-gate-username").value.trim();
   const password = document.getElementById("login-gate-password").value;
-  const match = usersList.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
+  const match = usersList.find(u => u.login.toLowerCase() === login.toLowerCase() && u.password === password);
   if (!match) {
     document.getElementById("login-gate-error").textContent = "Usuário ou senha incorretos.";
     return;
@@ -3177,7 +3190,8 @@ function renderSettingsUsersList() {
     return `
     <div class="settings-user-block" data-username="${uname}">
       <div class="settings-user-row">
-        <input type="text" class="settings-user-name-input" data-old="${uname}" value="${uname}" placeholder="Usuário">
+        <input type="text" class="settings-user-name-input" data-old="${uname}" value="${uname}" placeholder="Nome">
+        <input type="text" class="settings-user-login-input" data-old-login="${(u.login || "").replace(/"/g, "&quot;")}" data-username="${uname}" value="${(u.login || "").replace(/"/g, "&quot;")}" placeholder="Usuário (login)">
         <input type="email" class="settings-user-email-input" data-username="${uname}" value="${(u.email || "").replace(/"/g, "&quot;")}" placeholder="email@exemplo.com">
         <input type="text" class="settings-user-password-input" data-username="${uname}" value="${u.password.replace(/"/g, "&quot;")}">
         <span class="settings-role-badge ${u.role}">${u.role}</span>
@@ -3226,6 +3240,24 @@ function renderSettingsUsersList() {
       saveUsersList();
       renderSettingsUsersList();
       applyRolePermissions();
+    }
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") input.blur(); });
+    input.addEventListener("blur", commit);
+  });
+  el.querySelectorAll(".settings-user-login-input").forEach(input => {
+    function commit() {
+      const oldLogin = input.dataset.oldLogin;
+      const newLogin = input.value.trim();
+      if (!newLogin) { input.value = oldLogin; return; }
+      if (newLogin === oldLogin) return;
+      if (usersList.some(u => (u.login || "").toLowerCase() === newLogin.toLowerCase() && u.login !== oldLogin)) {
+        input.value = oldLogin;
+        return; // login already in use — ignore silently, keep old value
+      }
+      const u = usersList.find(x => x.username === input.dataset.username);
+      if (u) u.login = newLogin;
+      saveUsersList();
+      renderSettingsUsersList();
     }
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") input.blur(); });
     input.addEventListener("blur", commit);
@@ -3312,10 +3344,13 @@ document.getElementById("settings-add-user-btn").addEventListener("click", () =>
   const password = document.getElementById("settings-new-password").value.trim();
   const role = document.getElementById("settings-new-role").value;
   if (!username || !password) return;
-  if (usersList.some(u => u.username.toLowerCase() === username.toLowerCase())) return; // name taken
+  if (usersList.some(u => u.username.toLowerCase() === username.toLowerCase() || (u.login || "").toLowerCase() === username.toLowerCase())) return; // name/login taken
   // New accounts always start with a provisional password — the person
   // sets their own real one on first login, so Adm never actually knows it.
-  usersList.push({ username, password, role, email: "", permissions: { ...COLAB_PERMISSIONS_DEFAULT }, mustChangePassword: true });
+  // Nome (display/assignee name) and login start the same — Adm can split
+  // them apart afterward in the row (e.g. rename the login to something
+  // shorter without touching the name used on tasks).
+  usersList.push({ username, login: username, password, role, email: "", permissions: { ...COLAB_PERMISSIONS_DEFAULT }, mustChangePassword: true });
   saveUsersList();
   renderSettingsUsersList();
   document.getElementById("settings-new-username").value = "";
@@ -8424,19 +8459,50 @@ function renderAdsCharts() {
   ids.forEach(id => mktCardNote(id, null));
 
   const labels = months.map(r => r.Mes);
-  const clicks = months.map(r => mktParseNum(r.Cliques) || 0);
-  const spend = months.map(r => mktParseNum(r.Spend) || 0);
+  const clicksMonthly = months.map(r => mktParseNum(r.Cliques) || 0);
+  const spendMonthly = months.map(r => mktParseNum(r.Spend) || 0);
   const cpc = months.map(r => mktParseNum(r.CPC) || 0);
+
+  const runningTotal = arr => { let sum = 0; return arr.map(v => (sum += v)); };
+  const clicksCumulative = runningTotal(clicksMonthly);
+  const spendCumulative = runningTotal(spendMonthly);
+
+  // Mensal e acumulado ficam em escalas bem diferentes (acumulado só
+  // cresce), então cada um usa seu próprio eixo Y pra continuar legível.
+  // IMPORTANTE: cada gráfico recebe seu PRÓPRIO objeto de options (Chart.js
+  // guarda estado interno dentro do objeto que recebe) — reusar o mesmo
+  // objeto em duas instâncias de Chart quebrava a segunda e travava a
+  // função antes de chegar no gráfico de CPC, que nunca era desenhado.
+  function dualAxisOptions() {
+    return mktBarOptions({
+      scales: {
+        y: { beginAtZero: true, position: "left" },
+        y1: { beginAtZero: true, position: "right", grid: { drawOnChartArea: false } }
+      }
+    });
+  }
 
   mktChart("chart-ads-clicks", {
     type: "line",
-    data: { labels, datasets: [{ label: "Cliques", data: clicks, borderColor: "#1f6feb", backgroundColor: "#1f6feb", tension: 0.3, pointRadius: 3, fill: false }] },
-    options: mktBarOptions()
+    data: {
+      labels,
+      datasets: [
+        { label: "Cliques (mês)", data: clicksMonthly, borderColor: "#1f6feb", backgroundColor: "#1f6feb", tension: 0.3, pointRadius: 2, fill: false, yAxisID: "y" },
+        { label: "Cliques (acumulado)", data: clicksCumulative, borderColor: "#9c9a92", backgroundColor: "#9c9a92", borderDash: [5, 4], tension: 0.3, pointRadius: 2, fill: false, yAxisID: "y1" }
+      ]
+    },
+    options: dualAxisOptions()
   });
   mktChart("chart-ads-budget", {
     type: "line",
-    data: { labels, datasets: [{ label: "Spend (USD)", data: spend, borderColor: "#2f6f4f", backgroundColor: "#2f6f4f", tension: 0.3, pointRadius: 3, fill: false }] },
-    options: mktBarOptions()
+    data: {
+      labels,
+      datasets: [
+        { label: "Spend (mês, USD)", data: spendMonthly, borderColor: "#2f6f4f", backgroundColor: "#2f6f4f", tension: 0.3, pointRadius: 2, fill: false, yAxisID: "y" },
+        { label: "Spend (acumulado, USD)", data: spendCumulative, borderColor: "#9c9a92", backgroundColor: "#9c9a92", borderDash: [5, 4], tension: 0.3, pointRadius: 2, fill: false, yAxisID: "y1" }
+      ]
+    },
+    options: dualAxisOptions()
   });
   mktChart("chart-ads-cpc", {
     type: "line",
