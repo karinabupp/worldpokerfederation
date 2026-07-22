@@ -1480,6 +1480,16 @@
     color: var(--text);
     cursor: pointer;
   }
+  #email-test-open-popup-btn {
+    margin-left: auto;
+    background: transparent;
+    border: none;
+    color: var(--accent);
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  #email-test-open-popup-btn.hidden { display: none; }
   .email-preview-card {
     padding: 4px 2px;
     font-size: 13.5px;
@@ -1501,6 +1511,78 @@
   .email-preview-item-parent { color: var(--text-muted); font-size: 12px; margin-top: 3px; }
   .email-preview-item-dates { color: var(--text-muted); font-size: 12px; margin-top: 3px; }
   .email-preview-empty { color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px 0; }
+  .email-preview-cta { text-align: center; margin-top: 4px; }
+  .email-preview-cta-btn {
+    display: inline-block;
+    background: var(--accent);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 20px;
+    border-radius: 6px;
+  }
+
+  #digest-tasks-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  #digest-tasks-modal-backdrop.hidden { display: none; }
+  #digest-tasks-modal {
+    background: #ffffff;
+    border-radius: 12px;
+    width: 640px;
+    max-width: 92vw;
+    max-height: 82vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+  }
+  #digest-tasks-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  #digest-tasks-modal-header h3 { margin: 0; font-size: 15px; font-weight: 600; }
+  #digest-tasks-modal-close {
+    background: transparent;
+    border: none;
+    font-size: 15px;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 4px;
+  }
+  #digest-tasks-modal-close:hover { background: var(--land-default); color: var(--text); }
+  #digest-tasks-modal-body { padding: 16px 18px 20px; overflow-y: auto; }
+  .digest-modal-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+  }
+  .digest-modal-item:last-child { margin-bottom: 0; }
+  .digest-modal-status-select {
+    flex-shrink: 0;
+    border: none;
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
 
   #goals-expand-modal-backdrop {
     position: fixed;
@@ -2407,9 +2489,20 @@
       <div id="email-test-picker-row">
         <label for="email-test-person-select">Ver como ficaria para:</label>
         <select id="email-test-person-select"></select>
+        <button id="email-test-open-popup-btn" type="button" class="hidden">👁 Abrir popup "Ver tarefas"</button>
       </div>
       <div id="email-test-preview"></div>
     </div>
+  </div>
+</div>
+
+<div id="digest-tasks-modal-backdrop" class="hidden">
+  <div id="digest-tasks-modal">
+    <div id="digest-tasks-modal-header">
+      <h3 id="digest-tasks-modal-title"></h3>
+      <button id="digest-tasks-modal-close" type="button">✕</button>
+    </div>
+    <div id="digest-tasks-modal-body"></div>
   </div>
 </div>
 
@@ -4847,19 +4940,22 @@ document.getElementById("tasks-general-filter").addEventListener("change", (e) =
 
 // --- "Testar email" preview: shows exactly what the daily digest email
 // would contain for a chosen person, so the wording/layout can be tuned
-// before relying on the Apps Script send. Mirrors that script's rule:
+// before relying on the Apps Script send. Mirrors that script's rules:
 // only subtasks (depth > 0) are listed as items — a top-level task that
 // just groups subtasks together shows up only as their "task mãe"
-// reference, never as its own line.
+// reference, never as its own line — and only tasks that have already
+// started (startDate <= today) are included, so nothing shows up before
+// it's actually supposed to begin.
 const EMAIL_DIGEST_ORDER = ["Late", "Not Started", "In Progress"];
 const EMAIL_DIGEST_LABELS = { "Late": "Atrasadas", "Not Started": "Não iniciadas", "In Progress": "Em andamento" };
 
 function buildDigestForPerson(personName) {
+  const today = todayISO();
   const grouped = { "Late": [], "Not Started": [], "In Progress": [] };
   function walk(items, parentName, depth) {
     items.forEach(t => {
-      if (depth > 0 && grouped[t.status] && t.assignees.includes(personName)) {
-        grouped[t.status].push({ name: t.name, parent: parentName, startDate: t.startDate, endDate: t.endDate });
+      if (depth > 0 && grouped[t.status] && t.assignees.includes(personName) && t.startDate && t.startDate <= today) {
+        grouped[t.status].push({ id: t.id, name: t.name, status: t.status, parent: parentName, startDate: t.startDate, endDate: t.endDate });
       }
       walk(t.subtasks, t.name, depth + 1);
     });
@@ -4870,7 +4966,14 @@ function buildDigestForPerson(personName) {
 
 function renderEmailPreview(personName) {
   const previewEl = document.getElementById("email-test-preview");
-  if (!personName) { previewEl.innerHTML = `<div class="email-preview-empty">Cadastre pelo menos um responsável primeiro.</div>`; return; }
+  const openBtn = document.getElementById("email-test-open-popup-btn");
+  if (!personName) {
+    previewEl.innerHTML = `<div class="email-preview-empty">Cadastre pelo menos um responsável primeiro.</div>`;
+    openBtn.classList.add("hidden");
+    return;
+  }
+  openBtn.classList.remove("hidden");
+  openBtn.dataset.name = personName;
   const person = assigneesList.find(a => a.name === personName);
   const grouped = buildDigestForPerson(personName);
   const total = EMAIL_DIGEST_ORDER.reduce((sum, s) => sum + grouped[s].length, 0);
@@ -4886,7 +4989,7 @@ function renderEmailPreview(personName) {
   html += `<p class="email-preview-greeting">Oi ${firstName}, esse é o resumo das suas tasks no WPF Dashboard hoje (${today}):</p>`;
 
   if (!total) {
-    html += `<div class="email-preview-empty">Nenhuma subtask atrasada, não iniciada ou em andamento pra essa pessoa hoje — o email diário não seria enviado (não manda email vazio).</div>`;
+    html += `<div class="email-preview-empty">Nenhuma subtask já iniciada, atrasada ou em andamento pra essa pessoa hoje — o email diário não seria enviado (não manda email vazio).</div>`;
   } else {
     EMAIL_DIGEST_ORDER.forEach(status => {
       const list = grouped[status];
@@ -4903,6 +5006,7 @@ function renderEmailPreview(personName) {
         `).join("")}
       </div>`;
     });
+    html += `<div class="email-preview-cta"><span class="email-preview-cta-btn">Ver tarefas</span></div>`;
   }
   html += `</div>`;
   previewEl.innerHTML = html;
@@ -4932,6 +5036,79 @@ document.getElementById("email-test-modal-backdrop").addEventListener("click", (
 document.getElementById("email-test-person-select").addEventListener("change", (e) => {
   renderEmailPreview(e.target.value);
 });
+document.getElementById("email-test-open-popup-btn").addEventListener("click", (e) => {
+  const name = e.currentTarget.dataset.name;
+  if (name) openDigestTasksModal(name);
+});
+
+// --- "Ver tarefas" popup — the button at the end of the real email links
+// back here with ?verTarefas=<nome>, which opens this same list so the
+// person can update statuses (In Progress, Done, etc) without digging
+// through the full table. Each item drops off the list the moment its
+// status leaves Late/Not Started/In Progress, same as the overdue modal.
+let digestTasksModalPerson = null;
+
+function renderDigestTasksModal(personName) {
+  const grouped = buildDigestForPerson(personName);
+  const total = EMAIL_DIGEST_ORDER.reduce((sum, s) => sum + grouped[s].length, 0);
+  document.getElementById("digest-tasks-modal-title").textContent = `Tarefas de ${personName}`;
+  const body = document.getElementById("digest-tasks-modal-body");
+  if (!total) {
+    body.innerHTML = `<div class="email-preview-empty">Nenhuma tarefa pendente por aqui agora — tudo em dia! 🎉</div>`;
+    return;
+  }
+  body.innerHTML = EMAIL_DIGEST_ORDER.map(status => {
+    const list = grouped[status];
+    if (!list.length) return "";
+    const color = (TASK_STATUS_COLORS[status] || {}).text || "inherit";
+    return `<div class="email-preview-section">
+      <h4 style="color:${color}">${EMAIL_DIGEST_LABELS[status]} (${list.length})</h4>
+      ${list.map(item => `
+        <div class="digest-modal-item">
+          <div>
+            <div class="email-preview-item-name">${item.name}</div>
+            ${item.parent ? `<div class="email-preview-item-parent">↳ ${item.parent}</div>` : ""}
+            <div class="email-preview-item-dates">Início: ${item.startDate ? formatEntryDate(item.startDate) : "—"} · Vence: ${item.endDate ? formatEntryDate(item.endDate) : "—"}</div>
+          </div>
+          <select class="digest-modal-status-select" data-id="${item.id}" style="background:${(TASK_STATUS_COLORS[item.status] || {}).bg || ""}">${taskStatusOptionsMarkup(item.status)}</select>
+        </div>
+      `).join("")}
+    </div>`;
+  }).join("");
+
+  body.querySelectorAll(".digest-modal-status-select").forEach(select => {
+    select.addEventListener("change", () => {
+      const t = findTaskById(tasksData, select.dataset.id);
+      if (!t) return;
+      t.status = select.value;
+      saveTasksData();
+      if (typeof renderTasksTable === "function") renderTasksTable();
+      if (typeof renderTasksGeneralStats === "function" && !document.getElementById("tasks-general-view").classList.contains("hidden")) renderTasksGeneralStats();
+      renderDigestTasksModal(personName); // re-render so the item drops off if it's no longer pending
+    });
+  });
+}
+
+function openDigestTasksModal(personName) {
+  digestTasksModalPerson = personName;
+  renderDigestTasksModal(personName);
+  document.getElementById("digest-tasks-modal-backdrop").classList.remove("hidden");
+}
+function closeDigestTasksModal() {
+  document.getElementById("digest-tasks-modal-backdrop").classList.add("hidden");
+  digestTasksModalPerson = null;
+}
+document.getElementById("digest-tasks-modal-close").addEventListener("click", closeDigestTasksModal);
+document.getElementById("digest-tasks-modal-backdrop").addEventListener("click", (e) => {
+  if (e.target.id === "digest-tasks-modal-backdrop") closeDigestTasksModal();
+});
+
+// Auto-opens this same popup when arriving from the "Ver tarefas" link in
+// a digest email (?verTarefas=Nome+Da+Pessoa).
+function checkDigestLinkParam() {
+  const person = new URLSearchParams(location.search).get("verTarefas");
+  if (person) openDigestTasksModal(person);
+}
 
 function setTasksViewMode(mode) {
   tasksViewMode = mode;
@@ -5526,6 +5703,7 @@ Promise.all([
   d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json"),
   loadFromCloud()
 ]).then(([world]) => {
+  checkDigestLinkParam();
   allCountries = topojson.feature(world, world.objects.countries).features;
   // world-atlas's admin-0 country set (like Natural Earth) folds Hong Kong and
   // Macau into China and doesn't give them their own polygons, unlike Taiwan
