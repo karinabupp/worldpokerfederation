@@ -3058,6 +3058,29 @@ function saveUsersList() {
   scheduleCloudSave();
 }
 
+// For changes that gate whether someone can log in AT ALL (new account,
+// password set/reset, login rename, role change) — these can't wait out
+// the normal 800ms debounce, since the person might close the tab (or try
+// logging in from another device) before that timer ever fires. Pushes to
+// the cloud right away instead.
+function saveUsersListNow() {
+  localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
+  bumpLocalRevision();
+  setCloudStatus("saving");
+  clearTimeout(cloudSyncTimer);
+  fetch(BIN_URL, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", "X-Master-Key": BIN_KEY },
+    body: JSON.stringify(collectAllData())
+  }).then(res => {
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    setCloudStatus("synced");
+  }).catch(err => {
+    console.warn("JSONBin save failed (user change), data stays local only:", err);
+    setCloudStatus("error");
+  });
+}
+
 // Applies the current role everywhere permissions live outside the
 // per-item render functions (Goals/Tasks handle their own via colabCan()
 // inside their markup builders — this just covers nav visibility and
@@ -3161,7 +3184,7 @@ function submitPasswordChange() {
   if (!u) { errEl.textContent = "Sessão expirada — tenta entrar de novo."; return; }
   u.password = pw1;
   u.mustChangePassword = false;
-  saveUsersList();
+  saveUsersListNow();
   currentUser = { username: u.username, role: u.role };
   localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(currentUser));
   pendingPasswordChangeUsername = null;
@@ -3272,7 +3295,7 @@ function renderSettingsUsersList() {
       // Usernames double as the "responsável" name on tasks now, so a
       // rename here needs to follow through everywhere they're assigned.
       renameAssigneeEverywhere(oldName, newName);
-      saveUsersList();
+      saveUsersListNow();
       renderSettingsUsersList();
       applyRolePermissions();
     }
@@ -3291,7 +3314,7 @@ function renderSettingsUsersList() {
       }
       const u = usersList.find(x => x.username === input.dataset.username);
       if (u) u.login = newLogin;
-      saveUsersList();
+      saveUsersListNow();
       renderSettingsUsersList();
     }
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") input.blur(); });
@@ -3313,7 +3336,7 @@ function renderSettingsUsersList() {
       // new account. Adm never sees/knows their final password.
       u.password = "wpf2026";
       u.mustChangePassword = true;
-      saveUsersList();
+      saveUsersListNow();
       renderSettingsUsersList();
     });
   });
@@ -3326,7 +3349,7 @@ function renderSettingsUsersList() {
         currentUser.role = u.role;
         localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(currentUser));
       }
-      saveUsersList();
+      saveUsersListNow();
       renderSettingsUsersList();
       applyRolePermissions();
     });
@@ -3337,7 +3360,7 @@ function renderSettingsUsersList() {
       const uname = btn.dataset.username;
       usersList = usersList.filter(u => u.username !== uname);
       removeAssigneeEverywhere(uname); // unassign them from any tasks too
-      saveUsersList();
+      saveUsersListNow();
       renderSettingsUsersList();
       if (typeof renderTasksTable === "function") renderTasksTable();
     });
@@ -3379,7 +3402,7 @@ document.getElementById("settings-add-user-btn").addEventListener("click", () =>
   // can split them apart afterward in the row (e.g. rename the login to
   // something shorter without touching the name used on tasks).
   usersList.push({ username, login: username, password: "wpf2026", role, email: "", permissions: { ...COLAB_PERMISSIONS_DEFAULT }, mustChangePassword: true });
-  saveUsersList();
+  saveUsersListNow();
   renderSettingsUsersList();
   usernameInput.value = "";
 });
