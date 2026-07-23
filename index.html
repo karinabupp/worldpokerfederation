@@ -3090,6 +3090,11 @@ function applyRolePermissions() {
   if (typeof renderGoalsGrid === "function") renderGoalsGrid();
 }
 
+// Kicked off immediately (not buried later in the map bootstrap) so the
+// login gate has the best chance of already knowing about accounts/resets
+// made on other devices by the time someone actually clicks "Entrar".
+const initialCloudLoadPromise = loadFromCloud();
+
 function showLoginGate() {
   pendingPasswordChangeUsername = null;
   document.getElementById("login-gate-backdrop").classList.remove("hidden");
@@ -3108,9 +3113,19 @@ function hideLoginGate() {
 // cleared once the new password is saved (or the gate is shown again).
 let pendingPasswordChangeUsername = null;
 
-function attemptLogin() {
+let cloudUsersLoaded = false;
+initialCloudLoadPromise.then(() => { cloudUsersLoaded = true; }).catch(() => { cloudUsersLoaded = true; });
+
+async function attemptLogin() {
   const login = document.getElementById("login-gate-username").value.trim();
   const password = document.getElementById("login-gate-password").value;
+  // On a device that's never opened the dashboard before, this runs before
+  // the cloud fetch (accounts/resets made on other devices) has landed —
+  // wait for it once, so a fast click doesn't fail against stale seed data.
+  if (!cloudUsersLoaded) {
+    document.getElementById("login-gate-error").textContent = "Carregando dados… um instante.";
+    await initialCloudLoadPromise.catch(() => {});
+  }
   const match = usersList.find(u => u.login.toLowerCase() === login.toLowerCase() && u.password === password);
   if (!match) {
     document.getElementById("login-gate-error").textContent = "Usuário ou senha incorretos.";
@@ -6255,7 +6270,7 @@ async function renderStateMap(countryName) {
 
 Promise.all([
   d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json"),
-  loadFromCloud()
+  initialCloudLoadPromise
 ]).then(([world]) => {
   checkDigestLinkParam();
   migrateOrphanAssigneesToUsers();
