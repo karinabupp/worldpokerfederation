@@ -197,16 +197,16 @@
     cursor: pointer;
   }
   #settings-add-user-btn {
-    background: #5a35c2;
-    color: #ffffff;
-    border: none;
+    background: #ffffff;
+    color: #2c2c2a;
+    border: 1px solid var(--border);
     border-radius: 6px;
     padding: 8px 16px;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
   }
-  #settings-add-user-btn:hover { background: #432799; }
+  #settings-add-user-btn:hover { background: var(--land-default); }
   .settings-user-block {
     background: #ffffff;
     border: 1px solid var(--border);
@@ -437,16 +437,16 @@
   #tasks-general-filter-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
   #tasks-general-filter-row label { font-size: 12.5px; color: var(--text-muted); font-weight: 500; }
   #tasks-test-email-btn {
-    background: #5a35c2;
-    color: #ffffff;
-    border: none;
+    background: #ffffff;
+    color: #2c2c2a;
+    border: 1px solid var(--border);
     border-radius: 6px;
     padding: 8px 16px;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
   }
-  #tasks-test-email-btn:hover { background: #432799; }
+  #tasks-test-email-btn:hover { background: var(--land-default); }
   #settings-backup-btn {
     background: #ffffff;
     color: #2c2c2a;
@@ -2094,37 +2094,47 @@
     display: none !important;
   }
   .hidden-by-perm { display: none !important; }
-  /* Federations / Committee: view-only for colab unless "Editar Federations
-     / Committee" is checked in Settings — every editable field in the
+  /* Federations / Committee: view-only for colab unless the matching
+     permission is checked in Settings — every editable field in the
      country and state/region panels gets locked, but search, filters,
-     tabs, and the panel open/close controls stay fully usable. */
-  body.fedcommittee-locked #panel-status,
-  body.fedcommittee-locked #panel-trading,
-  body.fedcommittee-locked #panel-partner,
-  body.fedcommittee-locked #panel-star,
-  body.fedcommittee-locked #panel-events,
-  body.fedcommittee-locked #affiliation-name-input,
-  body.fedcommittee-locked #affiliation-link-input,
-  body.fedcommittee-locked #panel-social,
-  body.fedcommittee-locked #panel-website,
-  body.fedcommittee-locked #panel-tournaments,
-  body.fedcommittee-locked #state-status,
-  body.fedcommittee-locked #state-partner,
-  body.fedcommittee-locked #state-star,
-  body.fedcommittee-locked #state-tournaments,
-  body.fedcommittee-locked #brazil-cnpj-select,
-  body.fedcommittee-locked #brazil-payment-select,
-  body.fedcommittee-locked #brazil-social-select {
+     tabs, and the panel open/close controls stay fully usable.
+     The country/state panel is SHARED between Federations and Committee
+     (same fields, relabeled by mode), so which lock applies depends on
+     which mode is active right now — see applyFedCommitteeLock(). Brazil
+     fields are their own separate panel, locked independently of mode. */
+  body.fed-geral-locked #panel-status,
+  body.fed-geral-locked #panel-trading,
+  body.fed-geral-locked #panel-partner,
+  body.fed-geral-locked #state-status,
+  body.fed-geral-locked #state-partner,
+  body.committee-locked-panel #panel-status,
+  body.committee-locked-panel #panel-partner,
+  body.committee-locked-panel #panel-star,
+  body.committee-locked-panel #panel-events,
+  body.committee-locked-panel #affiliation-name-input,
+  body.committee-locked-panel #affiliation-link-input,
+  body.committee-locked-panel #panel-social,
+  body.committee-locked-panel #panel-website,
+  body.committee-locked-panel #panel-tournaments,
+  body.committee-locked-panel #state-status,
+  body.committee-locked-panel #state-partner,
+  body.committee-locked-panel #state-star,
+  body.committee-locked-panel #state-tournaments,
+  body.fed-brazil-locked #brazil-cnpj-select,
+  body.fed-brazil-locked #brazil-payment-select,
+  body.fed-brazil-locked #brazil-social-select {
     pointer-events: none;
     opacity: 0.55;
   }
-  body.fedcommittee-locked #affiliation-add-btn,
-  body.fedcommittee-locked #save-btn,
-  body.fedcommittee-locked #state-save-btn,
-  body.fedcommittee-locked #brazil-save-btn,
-  body.fedcommittee-locked #import-btn,
-  body.fedcommittee-locked #import-file,
-  body.fedcommittee-locked .affiliation-remove-btn {
+  body.committee-locked-panel #affiliation-add-btn,
+  body.committee-locked-panel .affiliation-remove-btn,
+  body.fed-geral-locked #save-btn,
+  body.fed-geral-locked #state-save-btn,
+  body.fed-geral-locked #import-btn,
+  body.fed-geral-locked #import-file,
+  body.committee-locked-panel #save-btn,
+  body.committee-locked-panel #state-save-btn,
+  body.fed-brazil-locked #brazil-save-btn {
     display: none !important;
   }
 </style>
@@ -2380,9 +2390,9 @@
         <option value="colab">Colab</option>
         <option value="adm">Adm</option>
       </select>
-      <button id="settings-add-user-btn" type="button">+ Criar usuário</button>
-      <button id="tasks-test-email-btn" type="button" title="Ver como ficaria o email diário de uma pessoa">🧪 Testar email</button>
-      <button id="settings-backup-btn" type="button" title="Baixa um arquivo com tudo que está salvo hoje (federations, tasks, goals, usuários, social, etc)">💾 Baixar backup completo</button>
+      <button id="settings-add-user-btn" type="button">+User</button>
+      <button id="tasks-test-email-btn" type="button" title="Ver como ficaria o email diário de uma pessoa">Test Email</button>
+      <button id="settings-backup-btn" type="button" title="Baixa um arquivo com tudo que está salvo hoje (federations, tasks, goals, usuários, social, etc)">Backup</button>
     </div>
     <div id="settings-add-error"></div>
     <div id="settings-users-list"></div>
@@ -3054,7 +3064,9 @@ const COLAB_PERMISSIONS_DEFAULT = {
   goalsCreate: true,
   goalsEditExisting: false,
   goalsDelete: false,
-  fedCommitteeEdit: false
+  fedGeralEdit: false,
+  fedBrazilEdit: false,
+  committeeEdit: false
 };
 
 // Fills in permissions/mustChangePassword on any user record that predates
@@ -3128,10 +3140,23 @@ async function saveUsersListNow() {
 // per-item render functions (Goals/Tasks handle their own via colabCan()
 // inside their markup builders — this just covers nav visibility and
 // re-renders whatever's on screen so the CSS role-colab rules take hold).
+// The country/state panel is the SAME shared DOM whether Federations or
+// Committee is showing (relabeled by mode, not rebuilt) — so which of the
+// two "editar dados" permissions gates it depends on which mode is active
+// right now. Brazil's panel is separate and locked independently of mode.
+// Called on login/permission changes AND every time the mode switches.
+function applyFedCommitteeLock() {
+  const colab = isColab();
+  const inCommittee = typeof committeeModeActive !== "undefined" && committeeModeActive;
+  document.body.classList.toggle("fed-geral-locked", colab && !inCommittee && !colabCan("fedGeralEdit"));
+  document.body.classList.toggle("committee-locked-panel", colab && inCommittee && !colabCan("committeeEdit"));
+  document.body.classList.toggle("fed-brazil-locked", colab && !colabCan("fedBrazilEdit"));
+}
+
 function applyRolePermissions() {
   const colab = isColab();
   document.body.classList.toggle("role-colab", colab); // fixed rules: Settings, assignee/email manager gear — never configurable
-  document.body.classList.toggle("fedcommittee-locked", colab && !colabCan("fedCommitteeEdit"));
+  applyFedCommitteeLock();
   const badge = document.getElementById("current-user-badge");
   if (badge && currentUser) badge.textContent = `${currentUser.username} (${currentUser.role})`;
 
@@ -3192,7 +3217,7 @@ async function attemptLogin() {
     document.getElementById("login-gate-error").textContent = "Carregando dados… um instante.";
     await initialCloudLoadPromise.catch(() => {});
   }
-  const match = usersList.find(u => u.login.toLowerCase() === login.toLowerCase() && u.password === password);
+  const match = usersList.find(u => (u.login || u.username || "").toLowerCase() === login.toLowerCase() && u.password === password);
   if (!match) {
     document.getElementById("login-gate-error").textContent = "Usuário ou senha incorretos.";
     return;
@@ -3284,7 +3309,9 @@ const PERMISSION_LABELS = {
   goalsCreate: "Goals — criar KPI novo",
   goalsEditExisting: "Goals — editar KPI existente (nome, categoria, meta acumulativa, pausa, meses antigos)",
   goalsDelete: "Goals — excluir KPI",
-  fedCommitteeEdit: "Federations / Committee — editar dados (senão, só visualização)"
+  fedGeralEdit: "Federations — editar dados gerais (senão, só visualização)",
+  fedBrazilEdit: "Federations — editar dados Brasil (senão, só visualização)",
+  committeeEdit: "Committee — editar dados (senão, só visualização)"
 };
 
 // Which colab user's permission checklist is currently expanded in the
@@ -4842,6 +4869,7 @@ function migrateOrphanAssigneesToUsers() {
   found.forEach(name => {
     usersList.push({
       username: name,
+      login: name,
       password: "wpf2026",
       role: "colab",
       email: "",
@@ -5913,7 +5941,7 @@ function renderCrowns() {
   const completeCountries = isAffiliationsView()
     ? []
     : isCommitteeView()
-      ? allCountries.filter(f => isCommitteeStarred(f.properties.name))
+      ? [] // Star Events was removed from Committee — never draw stars here
       : allCountries.filter(f => isMemberComplete(f.properties.name) && mapFilterPass(f.properties.name));
   crownsLayer.selectAll("g.crown-marker")
     .data(completeCountries, d => d.properties.name)
@@ -6481,7 +6509,7 @@ function legendSubRowsMarkup(subRows, total) {
     return `<div class="legend-subrow-wrap">
       <div class="legend-row legend-row-clickable legend-subrow" data-subkey="${sr.key}">
         <div class="legend-left">${legendDotMarkup(sr.icon, sr.color)}${sr.label}</div>
-        <div class="legend-stats"><span class="legend-pct">${pct}%</span><span class="legend-count">${sr.count} países</span></div>
+        <div class="legend-stats"><span class="legend-pct">${pct}%</span><span class="legend-count">${sr.count} countries</span></div>
       </div>
       ${isOpen ? `<div class="legend-dropdown">${legendDropdownMarkup(sr.names)}</div>` : ""}
     </div>`;
@@ -6499,7 +6527,7 @@ function legendRowsMarkup(rows, total) {
     return `<div class="legend-row-wrap">
       <div class="legend-row legend-row-clickable" data-key="${r.key}">
         <div class="legend-left">${dot}${r.label}</div>
-        <div class="legend-stats"><span class="legend-pct">${pct}%</span><span class="legend-count">${r.count} países</span></div>
+        <div class="legend-stats"><span class="legend-pct">${pct}%</span><span class="legend-count">${r.count} countries</span></div>
       </div>
       ${expandedContent}
     </div>`;
@@ -6581,7 +6609,7 @@ function renderLegend() {
 
   legendTitleEl.textContent = "Federations";
   const total = allCountries.length;
-  legendTotal.textContent = total ? total + " países no total" : "";
+  legendTotal.textContent = total ? total + " countries total" : "";
 
   const counts = {};
   const namesByStatus = {};
@@ -6660,7 +6688,7 @@ function renderLegend() {
 function renderCommitteeLegend() {
   legendTitleEl.textContent = "Ladies";
   const total = allCountries.length;
-  legendTotal.textContent = total ? total + " países no total" : "";
+  legendTotal.textContent = total ? total + " countries total" : "";
 
   const counts = {};
   const namesByStatus = {};
@@ -6683,10 +6711,6 @@ function renderCommitteeLegend() {
       namesByStatus[rec.status].push(eventCount > 1 ? { name, label: `${name} (${eventCount} eventos)` } : name);
     } else {
       namesByStatus[rec.status].push(name);
-    }
-    if (isCommitteeStarred(name)) {
-      starEventsTotal += eventCount;
-      starClosedNames.push(eventCount > 1 ? { name, label: `${name} (${eventCount} eventos)` } : name);
     }
   });
 
@@ -6712,7 +6736,7 @@ function renderCommitteeLegend() {
 function renderAffiliationsLegend() {
   legendTitleEl.textContent = "Affiliations";
   const total = allCountries.length;
-  legendTotal.textContent = total ? total + " países no total" : "";
+  legendTotal.textContent = total ? total + " countries total" : "";
 
   const counts = {};
   const namesByStatus = {};
@@ -6795,6 +6819,7 @@ function setViewMode(committee) {
   fedsocLabelRightMembers.classList.remove("active");
   legendExpandedKey = null;
   legendExpandedSubKey = null;
+  applyFedCommitteeLock();
   populatePanelStatusOptions();
   populateStateStatusOptions();
   refreshMapColors();
@@ -7856,7 +7881,7 @@ function renderSocialSummary() {
       return `<div class="legend-row-wrap">
         <div class="legend-row legend-row-clickable" data-key="${key}">
           <div class="legend-left"><span class="legend-dot" style="background:${color}"></span>${label}</div>
-          <div class="legend-stats"><span class="legend-pct">${pct}%</span><span class="legend-count">${count} países</span></div>
+          <div class="legend-stats"><span class="legend-pct">${pct}%</span><span class="legend-count">${count} countries</span></div>
         </div>
         ${isOpen ? `<div class="legend-dropdown">${legendDropdownMarkup(names)}</div>` : ""}
       </div>`;
