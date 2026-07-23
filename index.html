@@ -447,6 +447,17 @@
     cursor: pointer;
   }
   #tasks-test-email-btn:hover { background: #432799; }
+  #settings-backup-btn {
+    background: #ffffff;
+    color: #2c2c2a;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #settings-backup-btn:hover { background: var(--land-default); }
   #tasks-general-filter {
     border: 1px solid var(--border);
     background: #ffffff;
@@ -2371,6 +2382,7 @@
       </select>
       <button id="settings-add-user-btn" type="button">+ Criar usuário</button>
       <button id="tasks-test-email-btn" type="button" title="Ver como ficaria o email diário de uma pessoa">🧪 Testar email</button>
+      <button id="settings-backup-btn" type="button" title="Baixa um arquivo com tudo que está salvo hoje (federations, tasks, goals, usuários, social, etc)">💾 Baixar backup completo</button>
     </div>
     <div id="settings-add-error"></div>
     <div id="settings-users-list"></div>
@@ -3414,6 +3426,24 @@ function settingsShowError(msg) {
     });
   });
 }
+
+// Downloads everything currently in the app (federations, committee,
+// states, goals, tasks, users, social, affiliations) as one JSON file —
+// a safety snapshot before any storage migration, and also usable as the
+// source file for a one-time import into wherever the data moves next.
+document.getElementById("settings-backup-btn").addEventListener("click", () => {
+  const data = collectAllData();
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `wpf-dashboard-backup-${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+});
 
 document.getElementById("settings-add-user-btn").addEventListener("click", async () => {
   const usernameInput = document.getElementById("settings-new-username");
