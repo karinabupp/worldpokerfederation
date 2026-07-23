@@ -3062,23 +3062,32 @@ function saveUsersList() {
 // password set/reset, login rename, role change) — these can't wait out
 // the normal 800ms debounce, since the person might close the tab (or try
 // logging in from another device) before that timer ever fires. Pushes to
-// the cloud right away instead.
-function saveUsersListNow() {
+// the cloud right away instead, and reports back whether it actually
+// worked — callers show this on screen rather than letting it fail silently.
+async function saveUsersListNow() {
   localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(usersList));
   bumpLocalRevision();
   setCloudStatus("saving");
   clearTimeout(cloudSyncTimer);
-  fetch(BIN_URL, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json", "X-Master-Key": BIN_KEY },
-    body: JSON.stringify(collectAllData())
-  }).then(res => {
-    if (!res.ok) throw new Error("HTTP " + res.status);
+  const body = JSON.stringify(collectAllData());
+  try {
+    const res = await fetch(BIN_URL, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "X-Master-Key": BIN_KEY },
+      body
+    });
+    if (!res.ok) {
+      let detail = "";
+      try { detail = await res.text(); } catch (e) {}
+      throw new Error(`HTTP ${res.status}${detail ? " — " + detail.slice(0, 200) : ""}`);
+    }
     setCloudStatus("synced");
-  }).catch(err => {
+    return { ok: true };
+  } catch (err) {
     console.warn("JSONBin save failed (user change), data stays local only:", err);
     setCloudStatus("error");
-  });
+    return { ok: false, error: (err && err.message) || String(err), payloadSize: body.length };
+  }
 }
 
 // Applies the current role everywhere permissions live outside the
@@ -3174,7 +3183,7 @@ async function attemptLogin() {
 // this is what lets Adm create accounts and reset passwords without ever
 // knowing the person's real, final password: the account only finishes
 // logging in once the person sets their own here.
-function submitPasswordChange() {
+async function submitPasswordChange() {
   const pw1 = document.getElementById("login-gate-new-password").value;
   const pw2 = document.getElementById("login-gate-new-password-confirm").value;
   const errEl = document.getElementById("login-gate-pw-error");
@@ -3182,9 +3191,17 @@ function submitPasswordChange() {
   if (pw1 !== pw2) { errEl.textContent = "As senhas não coincidem."; return; }
   const u = usersList.find(x => x.username === pendingPasswordChangeUsername);
   if (!u) { errEl.textContent = "Sessão expirada — tenta entrar de novo."; return; }
+  const oldPassword = u.password;
   u.password = pw1;
   u.mustChangePassword = false;
-  saveUsersListNow();
+  errEl.textContent = "Salvando…";
+  const result = await saveUsersListNow();
+  if (!result.ok) {
+    u.password = oldPassword;
+    u.mustChangePassword = true;
+    errEl.textContent = `Não consegui salvar a senha nova na nuvem (${result.error}). Tenta de novo — sem isso, essa senha só vai funcionar neste computador.`;
+    return;
+  }
   currentUser = { username: u.username, role: u.role };
   localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(currentUser));
   pendingPasswordChangeUsername = null;
@@ -3276,8 +3293,12 @@ function renderSettingsUsersList() {
   `;
   }).join("") : `<div class="settings-users-empty">Nenhum usuário ainda.</div>`;
 
+function settingsShowError(msg) {
+  const el = document.getElementById("settings-add-error");
+  if (el) el.textContent = msg;
+}
   el.querySelectorAll(".settings-user-name-input").forEach(input => {
-    function commit() {
+    async function commit() {
       const oldName = input.dataset.old;
       const newName = input.value.trim();
       if (!newName || newName === oldName) { input.value = oldName; return; }
@@ -3295,7 +3316,9 @@ function renderSettingsUsersList() {
       // Usernames double as the "responsável" name on tasks now, so a
       // rename here needs to follow through everywhere they're assigned.
       renameAssigneeEverywhere(oldName, newName);
-      saveUsersListNow();
+      settingsShowError("Salvando…");
+      const result = await saveUsersListNow();
+      settingsShowError(result.ok ? "" : `Não consegui salvar na nuvem (${result.error}) — o nome mudou só aqui neste computador por enquanto.`);
       renderSettingsUsersList();
       applyRolePermissions();
     }
@@ -3303,7 +3326,7 @@ function renderSettingsUsersList() {
     input.addEventListener("blur", commit);
   });
   el.querySelectorAll(".settings-user-login-input").forEach(input => {
-    function commit() {
+    async function commit() {
       const oldLogin = input.dataset.oldLogin;
       const newLogin = input.value.trim();
       if (!newLogin) { input.value = oldLogin; return; }
@@ -3314,7 +3337,9 @@ function renderSettingsUsersList() {
       }
       const u = usersList.find(x => x.username === input.dataset.username);
       if (u) u.login = newLogin;
-      saveUsersListNow();
+      settingsShowError("Salvando…");
+      const result = await saveUsersListNow();
+      settingsShowError(result.ok ? "" : `Não consegui salvar na nuvem (${result.error}) — esse login só vai funcionar neste computador por enquanto.`);
       renderSettingsUsersList();
     }
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") input.blur(); });
@@ -3328,7 +3353,7 @@ function renderSettingsUsersList() {
     });
   });
   el.querySelectorAll(".settings-user-reset-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
       const u = usersList.find(x => x.username === btn.dataset.username);
       if (!u) return;
       // Back to the standard default — they log in with this and pick a
@@ -3336,12 +3361,14 @@ function renderSettingsUsersList() {
       // new account. Adm never sees/knows their final password.
       u.password = "wpf2026";
       u.mustChangePassword = true;
-      saveUsersListNow();
+      settingsShowError("Salvando…");
+      const result = await saveUsersListNow();
+      settingsShowError(result.ok ? "" : `Não consegui salvar o reset na nuvem (${result.error}) — a senha nova só vale neste computador até tentar de novo.`);
       renderSettingsUsersList();
     });
   });
   el.querySelectorAll(".settings-user-role-select").forEach(select => {
-    select.addEventListener("change", () => {
+    select.addEventListener("change", async () => {
       const u = usersList.find(x => x.username === select.dataset.username);
       if (!u) return;
       u.role = select.value;
@@ -3349,18 +3376,22 @@ function renderSettingsUsersList() {
         currentUser.role = u.role;
         localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(currentUser));
       }
-      saveUsersListNow();
+      settingsShowError("Salvando…");
+      const result = await saveUsersListNow();
+      settingsShowError(result.ok ? "" : `Não consegui salvar o cargo na nuvem (${result.error}).`);
       renderSettingsUsersList();
       applyRolePermissions();
     });
   });
   el.querySelectorAll(".settings-user-delete-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
       if (usersList.length <= 1) return; // never delete the last account — no way back in
       const uname = btn.dataset.username;
       usersList = usersList.filter(u => u.username !== uname);
       removeAssigneeEverywhere(uname); // unassign them from any tasks too
-      saveUsersListNow();
+      settingsShowError("Salvando…");
+      const result = await saveUsersListNow();
+      settingsShowError(result.ok ? "" : `Não consegui salvar a exclusão na nuvem (${result.error}) — a pessoa pode reaparecer se recarregar em outro computador.`);
       renderSettingsUsersList();
       if (typeof renderTasksTable === "function") renderTasksTable();
     });
@@ -3384,7 +3415,7 @@ function renderSettingsUsersList() {
   });
 }
 
-document.getElementById("settings-add-user-btn").addEventListener("click", () => {
+document.getElementById("settings-add-user-btn").addEventListener("click", async () => {
   const usernameInput = document.getElementById("settings-new-username");
   const errEl = document.getElementById("settings-add-error");
   const username = usernameInput.value.trim();
@@ -3402,7 +3433,13 @@ document.getElementById("settings-add-user-btn").addEventListener("click", () =>
   // can split them apart afterward in the row (e.g. rename the login to
   // something shorter without touching the name used on tasks).
   usersList.push({ username, login: username, password: "wpf2026", role, email: "", permissions: { ...COLAB_PERMISSIONS_DEFAULT }, mustChangePassword: true });
-  saveUsersListNow();
+  errEl.textContent = "Salvando…";
+  const result = await saveUsersListNow();
+  if (!result.ok) {
+    errEl.textContent = `Criado, mas NÃO salvou na nuvem (${result.error}) — esse usuário só existe neste computador até isso ser resolvido. Tenta de novo em alguns segundos.`;
+  } else {
+    errEl.textContent = "";
+  }
   renderSettingsUsersList();
   usernameInput.value = "";
 });
